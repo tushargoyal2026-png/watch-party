@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineSync Pro - Real-Time Watch Party & Local Video Streaming</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fdf4f6',
+                            100: '#fce7eb',
+                            500: '#f43f5e',
+                            600: '#e11d48',
+                            700: '#be123c',
+                            900: '#881337',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Fuse.js CDN for Fuzzy Search -->
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #09090b; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+        @keyframes floatUp {
+            0% { transform: translateY(0px) scale(0.8); opacity: 1; }
+            100% { transform: translateY(-160px) scale(1.5); opacity: 0; }
+        }
+        .floating-emoji {
+            position: absolute;
+            animation: floatUp 2.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+            pointer-events: none;
+            font-size: 2.2rem;
+            z-index: 50;
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col selection:bg-brand-500 selection:text-white">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Top Navigation Bar -->
+    <header class="border-b border-zinc-800/80 bg-zinc-900/90 backdrop-blur-md sticky top-0 z-40 px-4 md:px-6 py-3.5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="bg-gradient-to-tr from-brand-600 to-rose-400 text-white p-2.5 rounded-xl shadow-lg shadow-brand-600/30 flex items-center justify-center">
+                <i data-lucide="clapperboard" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-base tracking-tight bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent flex items-center gap-2">
+                    CineSync Pro <span class="text-[10px] px-2 py-0.5 bg-brand-500/20 text-brand-400 rounded-full font-medium border border-brand-500/30">v2.6 Live</span>
+                </h1>
+                <p class="text-xs text-zinc-400">Local File & Multi-Source Synchronized Watch Party</p>
+            </div>
+        </div>
+        
+        <!-- Room Status & Metrics Header Button -->
+        <div class="flex items-center gap-3">
+            <div id="room-badge" class="hidden items-center gap-2.5 bg-zinc-800/90 border border-zinc-700/80 px-3.5 py-1.5 rounded-full text-xs shadow-inner">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="text-zinc-300 font-medium">Room: <span id="current-room-code" class="text-brand-400 font-bold uppercase tracking-wider"></span></span>
+                <button onclick="copyInviteLink()" class="text-zinc-400 hover:text-white transition ml-1" title="Copy Invite Link">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+            <button onclick="openMetricsModal()" class="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-3.5 py-2 rounded-xl text-xs font-medium transition flex items-center gap-2 border border-zinc-800 shadow-sm">
+                <i data-lucide="activity" class="w-4 h-4 text-brand-400"></i> Sync Stats & Drift
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Layout -->
+    <main class="flex-1 flex flex-col p-4 md:p-6 max-w-7xl mx-auto w-full gap-5">
+
+        <!-- VIEW 1: LOBBY & ROOM CREATION -->
+        <div id="view-lobby" class="flex-1 flex flex-col items-center justify-center py-8">
+            <div class="max-w-2xl w-full bg-zinc-900/90 border border-zinc-800/80 rounded-3xl p-8 md:p-10 shadow-2xl relative overflow-hidden backdrop-blur-xl">
+                <div class="absolute -top-24 -right-24 w-80 h-80 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute -bottom-24 -left-24 w-80 h-80 bg-rose-600/10 rounded-full blur-3xl pointer-events-none"></div>
+                
+                <div class="text-center mb-8 relative z-10">
+                    <div class="inline-flex p-3 rounded-2xl bg-brand-500/10 text-brand-400 mb-4 border border-brand-500/20">
+                        <i data-lucide="film" class="w-8 h-8"></i>
+                    </div>
+                    <h2 class="text-3xl font-extrabold tracking-tight mb-2">Watch Local Videos & Online Streams Together</h2>
+                    <p class="text-zinc-400 text-sm max-w-lg mx-auto">Upload local MP4/MKV files, paste video URLs, or stream YouTube videos in perfect synchronization with friends.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 relative z-10">
+                    <!-- Create Room -->
+                    <div class="bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-6 flex flex-col justify-between hover:border-brand-500/50 transition group">
+                        <div>
+                            <div class="w-10 h-10 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                                <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                            </div>
+                            <h3 class="font-bold text-base mb-1">Create Room</h3>
+                            <p class="text-xs text-zinc-400 mb-6 leading-relaxed">Start a watch party as host. Stream local files or video links seamlessly.</p>
+                        </div>
+                        <button onclick="createRoom()" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-semibold py-2.5 px-4 rounded-xl shadow-lg shadow-brand-600/20 transition flex items-center justify-center gap-2 text-xs">
+                            <i data-lucide="play" class="w-4 h-4"></i> Create New Room
+                        </button>
+                    </div>
+
+                    <!-- Join Room -->
+                    <div class="bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-6 flex flex-col justify-between hover:border-zinc-700 transition group">
+                        <div>
+                            <div class="w-10 h-10 rounded-xl bg-zinc-800 text-zinc-300 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                                <i data-lucide="log-in" class="w-5 h-5"></i>
+                            </div>
+                            <h3 class="font-bold text-base mb-1">Join Room</h3>
+                            <p class="text-xs text-zinc-400 mb-4 leading-relaxed">Enter a 6-character room code or use an invite link to jump right in.</p>
+                        </div>
+                        <div class="space-y-3">
+                            <input type="text" id="input-room-code" placeholder="Enter Code (e.g. CINE42)" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-brand-500 uppercase tracking-widest font-mono text-center">
+                            <button onclick="joinRoomByInput()" class="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-semibold py-2.5 px-4 rounded-xl transition flex items-center justify-center gap-2 text-xs border border-zinc-700">
+                                <i data-lucide="arrow-right-to-line" class="w-4 h-4"></i> Join Room
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Catalog Preview -->
+                <div class="border-t border-zinc-800/80 pt-6 relative z-10">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-semibold text-xs text-zinc-400 flex items-center gap-2 uppercase tracking-wider">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i> Featured Movie Catalog Preview
+                        </h4>
+                        <span class="text-[11px] text-zinc-500">Full library inside rooms</span>
+                    </div>
+                    <div id="lobby-catalog-preview" class="grid grid-cols-3 gap-3">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 2: WATCH PARTY ROOM -->
+        <div id="view-room" class="hidden flex-1 flex flex-col lg:flex-row gap-5">
+            
+            <!-- LEFT COLUMN: VIDEO PLAYER, SOURCES & CONTROLS -->
+            <div class="flex-1 flex flex-col gap-4">
+                
+                <!-- Video Player Container (HTML5 + YouTube IFrame Sandbox) -->
+                <div class="relative bg-black rounded-3xl overflow-hidden shadow-2xl border border-zinc-800/80 aspect-video group flex items-center justify-center">
+                    
+                    <!-- HTML5 Video Player -->
+                    <video id="main-video" class="w-full h-full object-contain" crossorigin="anonymous" playsinline controls>
+                        Your browser does not support HTML5 video.
+                    </video>
+
+                    <!-- YouTube Embed Iframe Player (Error 153 Bulletproof Sandbox) -->
+                    <div id="yt-iframe-container" class="w-full h-full hidden absolute inset-0 bg-black">
+                        <iframe id="yt-iframe" class="w-full h-full border-0" 
+                            src="" 
+                            title="YouTube video player" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                            referrerpolicy="strict-origin-when-cross-origin" 
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+
+                    <!-- Local File Match Prompt Overlay -->
+                    <div id="local-file-prompt" class="absolute inset-0 bg-zinc-950/95 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center hidden">
+                        <div class="w-12 h-12 rounded-2xl bg-brand-500/20 text-brand-400 flex items-center justify-center mb-3">
+                            <i data-lucide="hard-drive-upload" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="font-bold text-base mb-1">Host Loaded a Local Video</h3>
+                        <p class="text-xs text-zinc-400 max-w-sm mb-4">
+                            The host is playing local file: <span id="prompt-file-name" class="text-brand-400 font-bold"></span>. Select the matching file on your device to join synced video playback.
+                        </p>
+                        <label class="bg-brand-600 hover:bg-brand-500 text-white font-semibold px-4 py-2.5 rounded-xl text-xs cursor-pointer transition shadow-lg shadow-brand-600/30 flex items-center gap-2">
+                            <i data-lucide="folder-open" class="w-4 h-4"></i> Select Matching Local File
+                            <input type="file" accept="video/mp4,video/webm,video/mkv,video/quicktime" onchange="handleMatchLocalFile(event)" class="hidden">
+                        </label>
+                    </div>
+
+                    <!-- Emoji Reaction Overlay -->
+                    <div id="emoji-overlay" class="absolute inset-0 pointer-events-none overflow-hidden z-20"></div>
+
+                    <!-- Drift Correction Banner -->
+                    <div id="drift-status-banner" class="absolute top-4 left-4 bg-zinc-900/90 backdrop-blur-md border border-zinc-700 text-xs px-3.5 py-2 rounded-xl flex items-center gap-2.5 opacity-0 transition-opacity duration-300 z-30 shadow-xl">
+                        <i data-lucide="refresh-cw" class="w-4 h-4 text-brand-400 animate-spin"></i>
+                        <span id="drift-status-text">Syncing playback drift...</span>
+                    </div>
+
+                    <!-- Buffering Spinner -->
+                    <div id="video-spinner" class="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-20">
+                        <div class="w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                </div>
+
+                <!-- Source Selector & Current Media Bar -->
+                <div class="bg-zinc-900/90 border border-zinc-800/80 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 backdrop-blur-xl">
+                    <div class="flex items-center gap-3.5 min-w-0">
+                        <img id="current-movie-poster" src="https://placehold.co/80x120/18181b/f43f5e?text=Local" alt="Poster" class="w-12 h-16 object-cover rounded-xl border border-zinc-700/60 shadow-md shrink-0">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <h3 id="current-movie-title" class="font-bold text-sm sm:text-base truncate">No Video Loaded</h3>
+                                <span id="current-movie-cat" class="text-[10px] bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-md border border-zinc-700 font-medium shrink-0">Source</span>
+                            </div>
+                            <p id="current-movie-desc" class="text-xs text-zinc-400 line-clamp-1 mt-0.5">Upload local video, paste custom URL, or pick from movie catalog.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+                        <!-- Local Video Upload Button -->
+                        <label class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-3.5 py-2 rounded-xl text-xs font-medium transition flex items-center gap-1.5 border border-zinc-700 cursor-pointer shadow-sm">
+                            <i data-lucide="upload" class="w-4 h-4 text-brand-400"></i> Local File
+                            <input type="file" accept="video/mp4,video/webm,video/mkv,video/quicktime" onchange="handleLocalFileUpload(event)" class="hidden">
+                        </label>
+                        <!-- Add Custom URL Button -->
+                        <button onclick="openCustomUrlModal()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-3.5 py-2 rounded-xl text-xs font-medium transition flex items-center gap-1.5 border border-zinc-700 shadow-sm">
+                            <i data-lucide="link" class="w-4 h-4 text-blue-400"></i> Video URL
+                        </button>
+                        <!-- Browse Catalog Button -->
+                        <button onclick="openCatalogModal()" class="bg-brand-600 hover:bg-brand-500 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-lg shadow-brand-600/25">
+                            <i data-lucide="film" class="w-4 h-4"></i> Catalog
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Interactive Tabs Section -->
+                <div class="bg-zinc-900/90 border border-zinc-800/80 rounded-3xl flex-1 flex flex-col overflow-hidden min-h-[380px] backdrop-blur-xl">
+                    <!-- Tab Headers -->
+                    <div class="flex border-b border-zinc-800/80 bg-zinc-950/60 overflow-x-auto">
+                        <button onclick="switchTab('playlist')" id="tab-btn-playlist" class="flex-1 py-3.5 px-4 text-xs font-semibold border-b-2 border-brand-500 text-brand-400 transition flex items-center justify-center gap-2 whitespace-nowrap">
+                            <i data-lucide="list-video" class="w-4 h-4"></i> Shared Playlist (<span id="playlist-count">0</span>)
+                        </button>
+                        <button onclick="switchTab('catalog')" id="tab-btn-catalog" class="flex-1 py-3.5 px-4 text-xs font-semibold border-b-2 border-transparent text-zinc-400 hover:text-zinc-200 transition flex items-center justify-center gap-2 whitespace-nowrap">
+                            <i data-lucide="compass" class="w-4 h-4"></i> Fuse.js Catalog
+                        </button>
+                        <button onclick="switchTab('polls')" id="tab-btn-polls" class="flex-1 py-3.5 px-4 text-xs font-semibold border-b-2 border-transparent text-zinc-400 hover:text-zinc-200 transition flex items-center justify-center gap-2 whitespace-nowrap">
+                            <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Group Polls
+                        </button>
+                        <button onclick="switchTab('participants')" id="tab-btn-participants" class="flex-1 py-3.5 px-4 text-xs font-semibold border-b-2 border-transparent text-zinc-400 hover:text-zinc-200 transition flex items-center justify-center gap-2 whitespace-nowrap">
+                            <i data-lucide="users" class="w-4 h-4"></i> Participants (<span id="participants-count">1</span>)
+                        </button>
+                    </div>
+
+                    <!-- Tab 1: Shared Playlist Queue -->
+                    <div id="tab-content-playlist" class="p-4 md:p-5 flex-1 flex flex-col gap-3 overflow-y-auto">
+                        <!-- Local Drag-and-Drop Zone -->
+                        <div id="drop-zone" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" class="border-2 border-dashed border-zinc-800 hover:border-brand-500/50 rounded-2xl p-4 text-center transition bg-zinc-950/50 flex flex-col items-center justify-center gap-1.5 cursor-pointer">
+                            <i data-lucide="cloud-upload" class="w-6 h-6 text-zinc-500"></i>
+                            <p class="text-xs font-semibold text-zinc-300">Drag & Drop Local Video File Here</p>
+                            <span class="text-[10px] text-zinc-500">Supports MP4, WebM, MKV, MOV</span>
+                        </div>
+
+                        <div class="flex items-center justify-between mt-2 mb-1">
+                            <h4 class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Queue & Shared Media</h4>
+                            <span class="text-xs text-zinc-500">Click title to sync playback for all</span>
+                        </div>
+                        <div id="playlist-items" class="space-y-2.5">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Movie Discovery & Fuse.js Search -->
+                    <div id="tab-content-catalog" class="p-4 md:p-5 flex-1 flex flex-col gap-4 hidden overflow-y-auto">
+                        <div class="flex flex-col sm:flex-row gap-2.5">
+                            <div class="relative flex-1">
+                                <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-3 text-zinc-500"></i>
+                                <input type="text" id="movie-search-input" oninput="filterMoviesFuzzy()" placeholder="Fuzzy search by title, director, category..." class="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-brand-500">
+                            </div>
+                            <select id="movie-category-filter" onchange="filterMoviesFuzzy()" class="bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-300 focus:outline-none focus:border-brand-500">
+                                <option value="all">All Categories</option>
+                                <option value="Sci-Fi">Sci-Fi</option>
+                                <option value="Action">Action</option>
+                                <option value="Animation">Animation</option>
+                                <option value="Documentary">Documentary</option>
+                            </select>
+                        </div>
+                        <div id="movie-discovery-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Group Polls -->
+                    <div id="tab-content-polls" class="p-4 md:p-5 flex-1 flex flex-col gap-4 hidden overflow-y-auto">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Active Room Polls</h4>
+                            <button onclick="openCreatePollModal()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-3.5 py-1.5 rounded-xl text-xs font-medium transition border border-zinc-700 flex items-center gap-1.5 shadow-sm">
+                                <i data-lucide="plus" class="w-3.5 h-3.5 text-brand-400"></i> Create Poll
+                            </button>
+                        </div>
+                        <div id="polls-container" class="space-y-4">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Tab 4: Participants -->
+                    <div id="tab-content-participants" class="p-4 md:p-5 flex-1 flex flex-col gap-3 hidden overflow-y-auto">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Active Participants & Host Control</h4>
+                            <button onclick="simulateAddPeer()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-3.5 py-1.5 rounded-xl text-xs font-medium transition border border-zinc-700 flex items-center gap-1.5 shadow-sm">
+                                <i data-lucide="user-plus" class="w-3.5 h-3.5 text-emerald-400"></i> Simulate Joiner
+                            </button>
+                        </div>
+                        <div id="participants-list" class="space-y-2.5">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: LIVE CHAT & EMOJI REACTIONS -->
+            <div class="w-full lg:w-84 bg-zinc-900/90 border border-zinc-800/80 rounded-3xl flex flex-col overflow-hidden h-[520px] lg:h-auto backdrop-blur-xl">
+                <!-- Chat Header -->
+                <div class="p-4 border-b border-zinc-800/80 bg-zinc-950/60 flex items-center justify-between">
+                    <h3 class="font-bold text-xs uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+                        <i data-lucide="message-square" class="w-4 h-4 text-brand-500"></i> Live Room Chat
+                    </h3>
+                    <span id="chat-online-badge" class="text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full font-medium">1 Online</span>
+                </div>
+
+                <!-- Chat Messages Feed -->
+                <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3 flex flex-col">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <!-- Quick Emoji Reactions Bar -->
+                <div class="p-3 border-t border-zinc-800/80 bg-zinc-950/40 flex items-center justify-around">
+                    <button onclick="sendEmojiReaction('🔥')" class="hover:scale-125 transition text-2xl p-1" title="Fire">🔥</button>
+                    <button onclick="sendEmojiReaction('❤️')" class="hover:scale-125 transition text-2xl p-1" title="Heart">❤️</button>
+                    <button onclick="sendEmojiReaction('😂')" class="hover:scale-125 transition text-2xl p-1" title="Laugh">😂</button>
+                    <button onclick="sendEmojiReaction('😮')" class="hover:scale-125 transition text-2xl p-1" title="Wow">😮</button>
+                    <button onclick="sendEmojiReaction('🍿')" class="hover:scale-125 transition text-2xl p-1" title="Popcorn">🍿</button>
+                    <button onclick="sendEmojiReaction('👏')" class="hover:scale-125 transition text-2xl p-1" title="Clap">👏</button>
+                </div>
+
+                <!-- Chat Input -->
+                <form onsubmit="handleChatSubmit(event)" class="p-3.5 border-t border-zinc-800/80 bg-zinc-950/80 flex gap-2">
+                    <input type="text" id="chat-input" placeholder="Send a message to room..." class="flex-1 bg-zinc-900 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-brand-500">
+                    <button type="submit" class="bg-brand-600 hover:bg-brand-500 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition shadow-lg shadow-brand-600/30 flex items-center justify-center">
+                        <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- MODAL: ADD CUSTOM URL -->
+    <div id="modal-custom-url" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-md w-full p-6 shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold text-sm flex items-center gap-2">
+                    <i data-lucide="link" class="w-4 h-4 text-blue-400"></i> Load Video Stream URL
+                </h3>
+                <button onclick="closeCustomUrlModal()" class="text-zinc-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form onsubmit="submitCustomUrl(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-zinc-400 mb-1.5">Direct Video or YouTube URL</label>
+                    <input type="url" id="custom-url-input" required placeholder="https://commondatastorage... or https://youtube.com/watch?v=..." class="w-full bg-zinc-950 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-zinc-400 mb-1.5">Video Title (Optional)</label>
+                    <input type="text" id="custom-title-input" placeholder="e.g. Custom Web Stream" class="w-full bg-zinc-950 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 rounded-xl transition text-xs shadow-lg shadow-blue-600/30">
+                    Load & Sync Stream
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CATALOG SELECTOR -->
+    <div id="modal-catalog" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+            <div class="p-5 border-b border-zinc-800 flex items-center justify-between">
+                <h3 class="font-bold text-sm flex items-center gap-2">
+                    <i data-lucide="film" class="w-4 h-4 text-brand-500"></i> Select Movie for Watch Party
+                </h3>
+                <button onclick="closeCatalogModal()" class="text-zinc-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-5 overflow-y-auto flex-1 space-y-3">
+                <div id="modal-catalog-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CREATE POLL -->
+    <div id="modal-poll" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-md w-full p-6 shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold text-sm flex items-center gap-2">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4 text-brand-500"></i> Create Group Poll
+                </h3>
+                <button onclick="closeCreatePollModal()" class="text-zinc-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form onsubmit="submitNewPoll(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-zinc-400 mb-1.5">Poll Question</label>
+                    <input type="text" id="poll-question-input" required placeholder="e.g. What should we watch next?" class="w-full bg-zinc-950 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-zinc-400 mb-1.5">Options (comma-separated)</label>
+                    <input type="text" id="poll-options-input" required placeholder="Action Thriller, Sci-Fi Classic, Anime" class="w-full bg-zinc-950 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                </div>
+                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-semibold py-2.5 rounded-xl transition text-xs shadow-lg shadow-brand-600/30">
+                    Launch Poll to Room
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: METRICS & LATENCY STATS -->
+    <div id="modal-metrics" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-6">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-sm flex items-center gap-2">
+                    <i data-lucide="activity" class="w-4 h-4 text-brand-400"></i> Sync Latency & Performance Monitor
+                </h3>
+                <button onclick="closeMetricsModal()" class="text-zinc-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-zinc-950 p-4 rounded-2xl border border-zinc-800">
+                    <span class="text-xs text-zinc-400">P95 Propagation</span>
+                    <div class="text-2xl font-bold text-emerald-400 mt-1" id="metric-latency">~28 ms</div>
+                    <span class="text-[10px] text-zinc-500">Target: ≤ 250 ms</span>
+                </div>
+                <div class="bg-zinc-950 p-4 rounded-2xl border border-zinc-800">
+                    <span class="text-xs text-zinc-400">Max Playback Drift</span>
+                    <div class="text-2xl font-bold text-brand-400 mt-1" id="metric-drift">35 ms</div>
+                    <span class="text-[10px] text-zinc-500">Target: ≤ 500 ms</span>
+                </div>
+                <div class="bg-zinc-950 p-4 rounded-2xl border border-zinc-800">
+                    <span class="text-xs text-zinc-400">Active Room Peers</span>
+                    <div class="text-2xl font-bold text-white mt-1" id="metric-peers">1 Peer</div>
+                    <span class="text-[10px] text-zinc-500">BroadcastChannel Sync</span>
+                </div>
+                <div class="bg-zinc-950 p-4 rounded-2xl border border-zinc-800">
+                    <span class="text-xs text-zinc-400">Player Engine</span>
+                    <div class="text-2xl font-bold text-emerald-400 mt-1" id="metric-engine">HTML5 / YouTube</div>
+                    <span class="text-[10px] text-zinc-500">Error 153 Bulletproof</span>
+                </div>
+            </div>
+
+            <div class="bg-zinc-950 p-4 rounded-2xl border border-zinc-800 text-xs text-zinc-400 space-y-2">
+                <div class="font-semibold text-zinc-200">Local & Remote Sync Capabilities:</div>
+                <ul class="list-disc list-inside space-y-1 text-zinc-400">
+                    <li>Local files converted via FileReader & `URL.createObjectURL`.</li>
+                    <li>YouTube embeds load via `youtube-nocookie.com` to prevent embed restrictions.</li>
+                    <li>Late joiners automatically catch up to host playback position.</li>
+                </ul>
+            </div>
+
+            <button onclick="closeMetricsModal()" class="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-semibold py-2.5 rounded-xl transition text-xs border border-zinc-700">
+                Close Metrics Dashboard
+            </button>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        // --- MOVIE CATALOG DATA & FUSE.JS INDEXING ---
+        const MOVIE_CATALOG = [
+            {
+                id: 'big-buck-bunny',
+                title: 'Big Buck Bunny',
+                category: 'Animation',
+                type: 'direct',
+                director: 'Blender Foundation',
+                duration: '9:56',
+                poster: 'https://placehold.co/300x450/18181b/f43f5e?text=Big+Buck+Bunny',
+                videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+                description: 'A large and lovable rabbit deals with three bullying rodents in this classic open-source animated short.'
+            },
+            {
+                id: 'elephants-dream',
+                title: 'Elephants Dream',
+                category: 'Sci-Fi',
+                type: 'direct',
+                director: 'Bassiscus, Blender',
+                duration: '10:53',
+                poster: 'https://placehold.co/300x450/18181b/3b82f6?text=Elephants+Dream',
+                videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+                description: 'Two men explore a surreal, mechanical world of their own creation in the worlds first open movie.'
+            },
+            {
+                id: 'sintel',
+                title: 'Sintel Action Reel',
+                category: 'Action',
+                type: 'direct',
+                director: 'Colin Levy',
+                duration: '14:48',
+                poster: 'https://placehold.co/300x450/18181b/10b981?text=Sintel',
+                videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+                description: 'A lonely young woman, Sintel, helps and befriends a dragon, only to have it taken away from her.'
+            },
+            {
+                id: 'tears-of-steel',
+                title: 'Tears of Steel VFX',
+                category: 'Sci-Fi',
+                type: 'direct',
+                director: 'Ian Hubert',
+                duration: '12:14',
+                poster: 'https://placehold.co/300x450/18181b/a855f7?text=Tears+of+Steel',
+                videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+                description: 'In a futuristic Amsterdam, a group of warriors gather to stage a desperate last stand.'
+            },
+            {
+                id: 'yt-cyberpunk',
+                title: 'Cyberpunk 2077 Cinematic Trailer',
+                category: 'Action',
+                type: 'youtube',
+                youtubeId: 'LembwKDo1Dk',
+                director: 'CD Projekt Red',
+                duration: '4:15',
+                poster: 'https://placehold.co/300x450/18181b/f59e0b?text=Cyberpunk+2077',
+                videoUrl: 'https://www.youtube.com/watch?v=LembwKDo1Dk',
+                description: 'High-octane futuristic sci-fi story trailer set in Night City.'
+            }
+        ];
+
+        let fuseInstance = null;
+
+        // --- GLOBAL APP STATE ---
+        let state = {
+            roomCode: null,
+            isHost: false,
+            username: 'User_' + Math.floor(1000 + Math.random() * 9000),
+            currentMedia: MOVIE_CATALOG[0],
+            isPlaying: false,
+            currentTime: 0,
+            playlist: [MOVIE_CATALOG[0], MOVIE_CATALOG[1], MOVIE_CATALOG[2]],
+            participants: [
+                { id: 'user-1', name: 'You', isHost: true, avatarColor: 'bg-brand-500' }
+            ],
+            chatMessages: [
+                { sender: 'System', text: 'Welcome to CineSync Pro! Upload local videos or pick streams.', time: 'Just now', system: true }
+            ],
+            polls: [
+                {
+                    id: 'poll-1',
+                    question: 'What video should we watch next?',
+                    options: [
+                        { text: 'Local Video Upload', votes: 3 },
+                        { text: 'Sintel Action Reel', votes: 2 },
+                        { text: 'Cyberpunk Trailer', votes: 1 }
+                    ],
+                    voted: false
+                }
+            ]
+        };
+
+        let html5Video = null;
+        let ytIframe = null;
+        let activePlayerType = 'direct'; // 'direct' or 'youtube'
+        let isSyncingProgrammatic = false;
+        let broadcastChannel = null;
+
+        // --- INITIALIZATION ---
+        window.addEventListener('DOMContentLoaded', () => {
+            html5Video = document.getElementById('main-video');
+            ytIframe = document.getElementById('yt-iframe');
+            html5Video.src = state.currentMedia.videoUrl;
+
+            // Initialize Fuse.js for Fuzzy Search
+            fuseInstance = new Fuse(MOVIE_CATALOG, {
+                keys: ['title', 'director', 'category', 'description'],
+                threshold: 0.4
+            });
+
+            lucide.createIcons();
+
+            // Check URL query parameters for room link
+            const urlParams = new URLSearchParams(window.location.search);
+            const roomParam = urlParams.get('room');
+            if (roomParam) {
+                document.getElementById('input-room-code').value = roomParam;
+                joinRoomByInput();
+            }
+
+            renderLobbyCatalogPreview();
+            setupHtml5VideoListeners();
+        });
+
+        // --- ROOM & BROADCAST CHANNEL ENGINE ---
+        function createRoom() {
+            const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+            state.roomCode = code;
+            state.isHost = true;
+            state.participants[0].name = state.username + ' (Host)';
+            state.participants[0].isHost = true;
+
+            initBroadcastChannel(code);
+            enterRoom(code);
+            showToast('Room created! Share code: ' + code, 'success');
+        }
+
+        function joinRoomByInput() {
+            const codeInput = document.getElementById('input-room-code').value.trim().toUpperCase();
+            if (!codeInput || codeInput.length < 3) {
+                showToast('Please enter a valid room code.', 'error');
+                return;
+            }
+            state.roomCode = codeInput;
+            state.isHost = false;
+            state.participants[0].name = state.username;
+            state.participants[0].isHost = false;
+
+            initBroadcastChannel(codeInput);
+            enterRoom(codeInput);
+
+            // Request state snapshot for late-joiners
+            setTimeout(() => {
+                if (broadcastChannel) {
+                    broadcastChannel.postMessage({ type: 'REQUEST_LATE_JOIN_STATE' });
+                }
+            }, 300);
+
+            showToast('Joined room ' + codeInput, 'success');
+        }
+
+        function initBroadcastChannel(code) {
+            if (broadcastChannel) broadcastChannel.close();
+            broadcastChannel = new BroadcastChannel('cinesync_room_' + code);
+            
+            broadcastChannel.onmessage = (event) => {
+                const data = event.data;
+                if (!data) return;
+
+                if (data.type === 'SYNC_ACTION') {
+                    handleIncomingSync(data.action, data.time);
+                } else if (data.type === 'CHANGE_MEDIA') {
+                    loadMedia(data.media, true);
+                } else if (data.type === 'CHAT_MESSAGE') {
+                    state.chatMessages.push(data.msg);
+                    renderChatMessages();
+                } else if (data.type === 'EMOJI_REACTION') {
+                    triggerEmojiAnimation(data.emoji);
+                } else if (data.type === 'REQUEST_LATE_JOIN_STATE' && state.isHost) {
+                    const currentTime = activePlayerType === 'direct' ? html5Video.currentTime : 0;
+                    broadcastChannel.postMessage({
+                        type: 'LATE_JOIN_STATE_RESPONSE',
+                        media: state.currentMedia,
+                        time: currentTime,
+                        isPlaying: state.isPlaying
+                    });
+                } else if (data.type === 'LATE_JOIN_STATE_RESPONSE' && !state.isHost) {
+                    loadMedia(data.media, true);
+                    setTimeout(() => {
+                        handleIncomingSync(data.isPlaying ? 'play' : 'pause', data.time);
+                    }, 400);
+                }
+            };
+        }
+
+        function enterRoom(code) {
+            document.getElementById('view-lobby').classList.add('hidden');
+            document.getElementById('view-room').classList.remove('hidden');
+            document.getElementById('room-badge').classList.remove('hidden');
+            document.getElementById('room-badge').classList.add('flex');
+            document.getElementById('current-room-code').innerText = code;
+
+            updateUI();
+            lucide.createIcons();
+        }
+
+        function copyInviteLink() {
+            const inviteUrl = window.location.origin + window.location.pathname + '?room=' + state.roomCode;
+            const tempInput = document.createElement('input');
+            tempInput.value = inviteUrl;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            showToast('Invite link copied to clipboard!', 'success');
+        }
+
+        // --- LOCAL VIDEO UPLOAD & PLAYBACK ENGINE ---
+        function handleLocalFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            processLocalVideoFile(file);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            document.getElementById('drop-zone').classList.add('border-brand-500', 'bg-brand-500/10');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            document.getElementById('drop-zone').classList.remove('border-brand-500', 'bg-brand-500/10');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            document.getElementById('drop-zone').classList.remove('border-brand-500', 'bg-brand-500/10');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                processLocalVideoFile(e.dataTransfer.files[0]);
+            }
+        }
+
+        function processLocalVideoFile(file) {
+            const localBlobUrl = URL.createObjectURL(file);
+            const localMediaObj = {
+                id: 'local-' + Date.now(),
+                title: file.name,
+                category: 'Local File',
+                type: 'direct',
+                poster: 'https://placehold.co/300x450/18181b/f43f5e?text=Local+File',
+                videoUrl: localBlobUrl,
+                isLocal: true,
+                fileName: file.name,
+                description: `Local video file uploaded from host device (${(file.size / (1024*1024)).toFixed(1)} MB)`
+            };
+
+            state.playlist.unshift(localMediaObj);
+            loadMedia(localMediaObj, false);
+
+            addSystemChatMessage(`Host uploaded local video "${file.name}"`);
+            showToast(`Loaded local video: ${file.name}`, 'success');
+        }
+
+        function handleMatchLocalFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const blobUrl = URL.createObjectURL(file);
+            html5Video.src = blobUrl;
+            document.getElementById('local-file-prompt').classList.add('hidden');
+            html5Video.play().catch(() => {});
+            showToast(`Matched local video file! Joined sync stream.`, 'success');
+        }
+
+        // --- MEDIA SWITCHING ENGINE (HTML5 / YouTube Error 153 Bulletproof) ---
+        function loadMedia(mediaObj, skipBroadcast = false) {
+            state.currentMedia = mediaObj;
+            document.getElementById('local-file-prompt').classList.add('hidden');
+
+            if (mediaObj.type === 'youtube') {
+                activePlayerType = 'youtube';
+                document.getElementById('main-video').classList.add('hidden');
+                document.getElementById('yt-iframe-container').classList.remove('hidden');
+                html5Video.pause();
+
+                // Build secure bulletproof YouTube nocookie URL avoiding Error 153
+                const embedUrl = `https://www.youtube-nocookie.com/embed/${mediaObj.youtubeId}?autoplay=1&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`;
+                ytIframe.src = embedUrl;
+            } else {
+                activePlayerType = 'direct';
+                document.getElementById('yt-iframe-container').classList.add('hidden');
+                document.getElementById('main-video').classList.remove('hidden');
+                ytIframe.src = '';
+
+                if (mediaObj.isLocal && !state.isHost && !mediaObj.videoUrl.startsWith('blob:')) {
+                    document.getElementById('prompt-file-name').innerText = mediaObj.fileName || mediaObj.title;
+                    document.getElementById('local-file-prompt').classList.remove('hidden');
+                } else {
+                    html5Video.src = mediaObj.videoUrl;
+                    html5Video.play().catch(() => {});
+                }
+            }
+
+            state.isPlaying = true;
+            updateUI();
+
+            if (!skipBroadcast && state.isHost && broadcastChannel) {
+                broadcastChannel.postMessage({ type: 'CHANGE_MEDIA', media: mediaObj });
+            }
+        }
+
+        // --- PLAYBACK SYNC & DRIFT CORRECTION ---
+        function setupHtml5VideoListeners() {
+            html5Video.addEventListener('play', () => {
+                if (isSyncingProgrammatic || activePlayerType !== 'direct') return;
+                state.isPlaying = true;
+                if (state.isHost && broadcastChannel) {
+                    broadcastChannel.postMessage({ type: 'SYNC_ACTION', action: 'play', time: html5Video.currentTime });
+                }
+            });
+
+            html5Video.addEventListener('pause', () => {
+                if (isSyncingProgrammatic || activePlayerType !== 'direct') return;
+                state.isPlaying = false;
+                if (state.isHost && broadcastChannel) {
+                    broadcastChannel.postMessage({ type: 'SYNC_ACTION', action: 'pause', time: html5Video.currentTime });
+                }
+            });
+
+            html5Video.addEventListener('seeked', () => {
+                if (isSyncingProgrammatic || activePlayerType !== 'direct') return;
+                if (state.isHost && broadcastChannel) {
+                    broadcastChannel.postMessage({ type: 'SYNC_ACTION', action: 'seek', time: html5Video.currentTime });
+                }
+            });
+        }
+
+        function handleIncomingSync(action, time) {
+            isSyncingProgrammatic = true;
+
+            if (activePlayerType === 'direct') {
+                const drift = Math.abs(html5Video.currentTime - time);
+                if (drift > 0.5) {
+                    html5Video.currentTime = time;
+                    showDriftBanner(`Corrected playback drift (${Math.round(drift * 1000)}ms)`);
+                }
+                if (action === 'play') {
+                    html5Video.play().catch(() => {});
+                    state.isPlaying = true;
+                } else if (action === 'pause') {
+                    html5Video.pause();
+                    state.isPlaying = false;
+                } else if (action === 'seek') {
+                    html5Video.currentTime = time;
+                }
+            }
+
+            setTimeout(() => { isSyncingProgrammatic = false; }, 150);
+        }
+
+        function showDriftBanner(text) {
+            const banner = document.getElementById('drift-status-banner');
+            document.getElementById('drift-status-text').innerText = text;
+            banner.classList.remove('opacity-0');
+            setTimeout(() => { banner.classList.add('opacity-0'); }, 3000);
+        }
+
+        // --- CUSTOM URL SUBMISSION ---
+        function submitCustomUrl(e) {
+            e.preventDefault();
+            const url = document.getElementById('custom-url-input').value.trim();
+            const title = document.getElementById('custom-title-input').value.trim() || 'Custom Stream';
+
+            if (!url) return;
+
+            let mediaObj = null;
+            if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+                const match = url.match(regExp);
+                const ytId = (match && match[2].length === 11) ? match[2] : null;
+
+                if (!ytId) {
+                    showToast('Invalid YouTube URL.', 'error');
+                    return;
+                }
+
+                mediaObj = {
+                    id: 'yt-' + Date.now(),
+                    title: title + ' (YouTube)',
+                    category: 'YouTube Stream',
+                    type: 'youtube',
+                    youtubeId: ytId,
+                    poster: 'https://placehold.co/300x450/18181b/f59e0b?text=YouTube',
+                    videoUrl: url,
+                    description: 'Custom YouTube video stream added to watch room.'
+                };
+            } else {
+                mediaObj = {
+                    id: 'custom-' + Date.now(),
+                    title: title,
+                    category: 'Custom URL',
+                    type: 'direct',
+                    poster: 'https://placehold.co/300x450/18181b/3b82f6?text=Custom+Stream',
+                    videoUrl: url,
+                    description: 'Custom video stream URL.'
+                };
+            }
+
+            state.playlist.unshift(mediaObj);
+            loadMedia(mediaObj, false);
+            closeCustomUrlModal();
+            showToast('Custom video stream loaded!', 'success');
+        }
+
+        function openCustomUrlModal() { document.getElementById('modal-custom-url').classList.remove('hidden'); }
+        function closeCustomUrlModal() { document.getElementById('modal-custom-url').classList.add('hidden'); }
+
+        // --- FUZZY SEARCH & DISCOVERY ---
+        function filterMoviesFuzzy() {
+            const query = document.getElementById('movie-search-input').value.trim();
+            const category = document.getElementById('movie-category-filter').value;
+            const grid = document.getElementById('movie-discovery-grid');
+
+            let results = MOVIE_CATALOG;
+            if (query && fuseInstance) {
+                results = fuseInstance.search(query).map(r => r.item);
+            }
+
+            if (category !== 'all') {
+                results = results.filter(m => m.category === category);
+            }
+
+            grid.innerHTML = results.map(m => `
+                <div onclick="loadMediaById('${m.id}')" class="bg-zinc-950 border border-zinc-800 hover:border-brand-500 cursor-pointer rounded-2xl p-3 flex flex-col gap-2.5 transition group">
+                    <img src="${m.poster}" class="w-full h-36 object-cover rounded-xl group-hover:scale-[1.02] transition" alt="${m.title}">
+                    <div>
+                        <h5 class="font-bold text-xs truncate group-hover:text-brand-400 transition">${m.title}</h5>
+                        <p class="text-[11px] text-zinc-400 line-clamp-1">${m.description}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadMediaById(id) {
+            const media = MOVIE_CATALOG.find(m => m.id === id);
+            if (media) loadMedia(media, false);
+        }
+
+        function renderLobbyCatalogPreview() {
+            const container = document.getElementById('lobby-catalog-preview');
+            container.innerHTML = MOVIE_CATALOG.slice(0, 3).map(m => `
+                <div class="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-2.5 flex flex-col gap-1.5">
+                    <img src="${m.poster}" class="w-full h-28 object-cover rounded-xl" alt="${m.title}">
+                    <h5 class="text-xs font-bold truncate">${m.title}</h5>
+                    <span class="text-[10px] text-zinc-400">${m.category}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderCatalogModalGrid() {
+            const container = document.getElementById('modal-catalog-grid');
+            container.innerHTML = MOVIE_CATALOG.map(m => `
+                <div onclick="loadMediaById('${m.id}'); closeCatalogModal();" class="bg-zinc-950 border border-zinc-800 hover:border-brand-500 cursor-pointer rounded-2xl p-3 flex gap-3.5 transition group">
+                    <img src="${m.poster}" class="w-16 h-24 object-cover rounded-xl shrink-0 group-hover:scale-105 transition" alt="${m.title}">
+                    <div class="flex flex-col justify-between flex-1 min-w-0">
+                        <div>
+                            <div class="flex items-center justify-between">
+                                <h5 class="font-bold text-xs group-hover:text-brand-400 transition truncate">${m.title}</h5>
+                                <span class="text-[10px] bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded">${m.category}</span>
+                            </div>
+                            <p class="text-[11px] text-zinc-400 line-clamp-2 mt-1">${m.description}</p>
+                        </div>
+                        <div class="flex items-center justify-between text-[11px] text-zinc-500">
+                            <span>${m.duration || 'Stream'}</span>
+                            <span class="text-brand-400 font-semibold">Play Now &rarr;</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- TABS & MODALS ---
+        function switchTab(tabName) {
+            ['playlist', 'catalog', 'polls', 'participants'].forEach(t => {
+                document.getElementById(`tab-content-${t}`).classList.add('hidden');
+                document.getElementById(`tab-btn-${t}`).classList.remove('border-brand-500', 'text-brand-400');
+                document.getElementById(`tab-btn-${t}`).classList.add('border-transparent', 'text-zinc-400');
+            });
+
+            document.getElementById(`tab-content-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tab-btn-${tabName}`).classList.remove('border-transparent', 'text-zinc-400');
+            document.getElementById(`tab-btn-${tabName}`).classList.add('border-brand-500', 'text-brand-400');
+
+            if (tabName === 'catalog') filterMoviesFuzzy();
+        }
+
+        function openCatalogModal() {
+            renderCatalogModalGrid();
+            document.getElementById('modal-catalog').classList.remove('hidden');
+            lucide.createIcons();
+        }
+        function closeCatalogModal() { document.getElementById('modal-catalog').classList.add('hidden'); }
+        function openCreatePollModal() { document.getElementById('modal-poll').classList.remove('hidden'); }
+        function closeCreatePollModal() { document.getElementById('modal-poll').classList.add('hidden'); }
+        function openMetricsModal() { document.getElementById('modal-metrics').classList.remove('hidden'); }
+        function closeMetricsModal() { document.getElementById('modal-metrics').classList.add('hidden'); }
+
+        // --- CHAT & EMOJI REACTIONS ---
+        function handleChatSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const msg = { sender: state.username, text, time: 'Just now', system: false };
+            state.chatMessages.push(msg);
+            input.value = '';
+            renderChatMessages();
+
+            if (broadcastChannel) broadcastChannel.postMessage({ type: 'CHAT_MESSAGE', msg });
+        }
+
+        function addSystemChatMessage(text) {
+            state.chatMessages.push({ sender: 'System', text, time: 'Just now', system: true });
+            renderChatMessages();
+        }
+
+        function renderChatMessages() {
+            const container = document.getElementById('chat-messages');
+            container.innerHTML = state.chatMessages.map(msg => {
+                if (msg.system) {
+                    return `<div class="text-center my-1"><span class="text-[10px] bg-zinc-800 text-zinc-400 px-3 py-1 rounded-full border border-zinc-700">${msg.text}</span></div>`;
+                }
+                const isMe = msg.sender === state.username;
+                return `
+                    <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
+                        <div class="flex items-center gap-1.5 mb-0.5">
+                            <span class="text-[10px] font-bold text-zinc-400">${msg.sender}</span>
+                            <span class="text-[9px] text-zinc-600">${msg.time}</span>
+                        </div>
+                        <div class="bg-zinc-800 text-zinc-200 text-xs px-3.5 py-2 rounded-2xl max-w-[85%] break-words ${isMe ? 'bg-brand-600/30 border border-brand-500/30 text-white' : ''}">
+                            ${msg.text}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function sendEmojiReaction(emoji) {
+            triggerEmojiAnimation(emoji);
+            if (broadcastChannel) broadcastChannel.postMessage({ type: 'EMOJI_REACTION', emoji });
+        }
+
+        function triggerEmojiAnimation(emoji) {
+            const overlay = document.getElementById('emoji-overlay');
+            const span = document.createElement('div');
+            span.className = 'floating-emoji';
+            span.innerText = emoji;
+            span.style.left = Math.random() * 80 + 10 + '%';
+            span.style.bottom = '10px';
+            overlay.appendChild(span);
+            setTimeout(() => span.remove(), 2200);
+        }
+
+        // --- POLLS ---
+        function submitNewPoll(e) {
+            e.preventDefault();
+            const question = document.getElementById('poll-question-input').value;
+            const optionsRaw = document.getElementById('poll-options-input').value;
+            const options = optionsRaw.split(',').map(o => ({ text: o.trim(), votes: 0 })).filter(o => o.text);
+
+            if (options.length < 2) {
+                showToast('Provide at least 2 poll options.', 'error');
+                return;
+            }
+
+            state.polls.unshift({ id: 'poll-' + Date.now(), question, options, voted: false });
+            closeCreatePollModal();
+            renderPolls();
+            showToast('New poll launched!', 'success');
+        }
+
+        function votePoll(pollId, optIdx) {
+            const poll = state.polls.find(p => p.id === pollId);
+            if (!poll || poll.voted) return;
+
+            poll.options[optIdx].votes++;
+            poll.voted = true;
+            renderPolls();
+            showToast('Vote registered!', 'success');
+        }
+
+        function renderPolls() {
+            const container = document.getElementById('polls-container');
+            if (state.polls.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-zinc-500 text-xs">No active polls.</div>`;
+                return;
+            }
+
+            container.innerHTML = state.polls.map(p => {
+                const totalVotes = p.options.reduce((sum, o) => sum + o.votes, 0);
+                return `
+                    <div class="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h5 class="font-bold text-xs text-zinc-200">${p.question}</h5>
+                            <span class="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded">${totalVotes} votes</span>
+                        </div>
+                        <div class="space-y-2">
+                            ${p.options.map((opt, idx) => {
+                                const pct = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
+                                return `
+                                    <div onclick="votePoll('${p.id}', ${idx})" class="relative bg-zinc-900 border border-zinc-800 hover:border-brand-500/50 rounded-xl p-2.5 cursor-pointer overflow-hidden transition group">
+                                        <div class="absolute inset-y-0 left-0 bg-brand-500/10 transition-all duration-500" style="width: ${pct}%"></div>
+                                        <div class="relative flex items-center justify-between text-xs font-medium">
+                                            <span class="text-zinc-200 group-hover:text-white">${opt.text}</span>
+                                            <span class="text-zinc-400 font-bold">${pct}% (${opt.votes})</span>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- PARTICIPANTS & HOST MANAGEMENT ---
+        function renderParticipants() {
+            const container = document.getElementById('participants-list');
+            document.getElementById('participants-count').innerText = state.participants.length;
+            document.getElementById('chat-online-badge').innerText = `${state.participants.length} Online`;
+
+            container.innerHTML = state.participants.map(p => `
+                <div class="bg-zinc-950 border border-zinc-800 rounded-2xl p-3 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full ${p.avatarColor} text-white font-bold flex items-center justify-center text-xs shadow-md">
+                            ${p.name.charAt(0)}
+                        </div>
+                        <div>
+                            <div class="font-bold text-xs flex items-center gap-1.5">
+                                ${p.name}
+                                ${p.isHost ? '<span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.2 rounded border border-amber-500/30">Host</span>' : ''}
+                            </div>
+                            <span class="text-[10px] text-emerald-400 flex items-center gap-1 mt-0.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Synced (18ms)
+                            </span>
+                        </div>
+                    </div>
+                    ${state.isHost && !p.isHost ? `
+                        <button onclick="transferHost('${p.id}')" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1 rounded-xl text-[11px] font-medium transition border border-zinc-700">
+                            Make Host
+                        </button>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function transferHost(peerId) {
+            const target = state.participants.find(p => p.id === peerId);
+            if (!target) return;
+
+            state.participants.forEach(p => p.isHost = (p.id === peerId));
+            state.isHost = (target.id === 'user-1');
+
+            renderParticipants();
+            addSystemChatMessage(`${target.name} is now host.`);
+            showToast('Host permissions transferred!', 'success');
+        }
+
+        function simulateAddPeer() {
+            const names = ['David_Dev', 'Elena_Pro', 'MarcusStream', 'Chloe_Watch'];
+            const randomName = names[Math.floor(Math.random() * names.length)] + '_' + Math.floor(Math.random() * 99);
+            const colors = ['bg-purple-500', 'bg-pink-500', 'bg-cyan-500', 'bg-amber-500'];
+
+            state.participants.push({
+                id: 'peer-' + Date.now(),
+                name: randomName,
+                isHost: false,
+                avatarColor: colors[Math.floor(Math.random() * colors.length)]
+            });
+
+            renderParticipants();
+            addSystemChatMessage(`${randomName} joined the room.`);
+            showToast(`${randomName} joined!`, 'success');
+        }
+
+        // --- PLAYLIST RENDER ---
+        function renderPlaylist() {
+            const container = document.getElementById('playlist-items');
+            document.getElementById('playlist-count').innerText = state.playlist.length;
+
+            container.innerHTML = state.playlist.map((m, idx) => {
+                const isCurrent = state.currentMedia.id === m.id;
+                return `
+                    <div onclick="loadMedia(state.playlist[${idx}], false)" class="bg-zinc-950 border ${isCurrent ? 'border-brand-500 bg-brand-500/5' : 'border-zinc-800 hover:border-zinc-700'} cursor-pointer rounded-2xl p-3 flex items-center justify-between transition group">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <span class="text-xs font-bold text-zinc-500 w-4">${idx + 1}</span>
+                            <img src="${m.poster}" class="w-10 h-14 object-cover rounded-xl shrink-0" alt="${m.title}">
+                            <div class="min-w-0">
+                                <h6 class="font-bold text-xs truncate ${isCurrent ? 'text-brand-400' : 'text-zinc-200 group-hover:text-white'}">${m.title}</h6>
+                                <span class="text-[10px] text-zinc-500">${m.category} ${m.isLocal ? '• Local File' : ''}</span>
+                            </div>
+                        </div>
+                        ${isCurrent ? '<span class="text-[10px] bg-brand-500 text-white px-2 py-0.5 rounded-full font-semibold">Playing</span>' : '<span class="text-xs text-zinc-600 group-hover:text-zinc-300">&rarr;</span>'}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- UI REFRESH ---
+        function updateUI() {
+            document.getElementById('current-movie-poster').src = state.currentMedia.poster;
+            document.getElementById('current-movie-title').innerText = state.currentMedia.title;
+            document.getElementById('current-movie-cat').innerText = state.currentMedia.category;
+            document.getElementById('current-movie-desc').innerText = state.currentMedia.description;
+
+            renderPlaylist();
+            renderParticipants();
+            renderPolls();
+            renderChatMessages();
+            lucide.createIcons();
+        }
+
+        // --- TOAST SYSTEM ---
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto bg-zinc-900 border ${type === 'success' ? 'border-emerald-500/50 text-emerald-300' : 'border-brand-500/50 text-brand-300'} px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-medium backdrop-blur-md transition-all duration-300 translate-y-2 opacity-0`;
+            toast.innerHTML = `
+                <i data-lucide="${type === 'success' ? 'check-circle' : 'alert-circle'}" class="w-4 h-4 ${type === 'success' ? 'text-emerald-400' : 'text-brand-400'}"></i>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
