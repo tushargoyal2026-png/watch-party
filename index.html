@@ -32,13 +32,6 @@
     <!-- Fuse.js for Fuzzy Search -->
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
 
-    <!-- Canvas Confetti -->
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
-    <!-- Firebase JS SDKs (v9/v10 Compat Mode) -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-
     <style>
         .chat-scroll::-webkit-scrollbar {
             width: 6px;
@@ -88,11 +81,6 @@
                 <button onclick="copyInviteLink()" class="hover:text-blue-400 text-slate-400 transition flex items-center gap-1 text-xs font-medium">
                     <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Link
                 </button>
-                <div class="h-4 w-px bg-slate-700"></div>
-                <div class="flex items-center gap-1 text-xs text-slate-300">
-                    <i data-lucide="users" class="w-3.5 h-3.5 text-blue-400"></i>
-                    <span id="participantCount">1</span> Connected
-                </div>
             </div>
 
             <button onclick="openRoomModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition shadow-md shadow-blue-600/20 flex items-center gap-2">
@@ -104,36 +92,34 @@
     <!-- Main Container -->
     <main class="flex-1 max-w-7xl w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-        <!-- Left Column: Player & Video Controls & Discovery (8 cols) -->
+        <!-- Left Column: Player & Discovery (8 cols) -->
         <div class="lg:col-span-8 flex flex-col gap-6">
             
             <!-- Video Player Section -->
-            <div class="relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl group">
+            <div class="relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
                 
-                <!-- Floating Emoji Overlay Container -->
                 <div id="emojiOverlay" class="absolute inset-0 pointer-events-none overflow-hidden z-30"></div>
 
-                <!-- Video Container -->
                 <div class="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
                     
-                    <!-- HTML5 Native Player -->
+                    <!-- HTML5 Native Video Player -->
                     <video id="nativePlayer" class="w-full h-full object-contain hidden" crossorigin="anonymous">
                         <source id="nativeSource" src="" type="video/mp4">
                         Your browser does not support HTML5 video.
                     </video>
 
-                    <!-- YouTube Embed Player Frame -->
+                    <!-- YouTube Embed Frame -->
                     <div id="ytPlayerContainer" class="w-full h-full hidden">
                         <iframe id="ytIframe" class="w-full h-full border-0" allow="autoplay; encrypted-media" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
                     </div>
 
-                    <!-- Placeholder / No Media State -->
+                    <!-- Placeholder -->
                     <div id="playerPlaceholder" class="flex flex-col items-center justify-center p-8 text-center">
                         <div class="w-16 h-16 bg-slate-800/80 rounded-2xl flex items-center justify-center mb-4 text-slate-400">
                             <i data-lucide="film" class="w-8 h-8"></i>
                         </div>
                         <h3 class="text-lg font-semibold text-white mb-1">No Video Loaded</h3>
-                        <p class="text-sm text-slate-400 max-w-md mb-4">Paste a YouTube link, MP4 URL, choose from discovery, or upload a local video file to start watching together.</p>
+                        <p class="text-sm text-slate-400 max-w-md mb-4">Paste a YouTube link, MP4 URL, or upload a local video file to start watching together across devices.</p>
                         
                         <div class="flex flex-wrap items-center justify-center gap-3">
                             <label class="cursor-pointer px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-medium border border-slate-700 flex items-center gap-2 transition">
@@ -141,17 +127,12 @@
                                 Upload Video File
                                 <input type="file" id="localFileInput" accept="video/mp4,video/webm,video/ogg,video/mkv" class="hidden" onchange="handleLocalFileUpload(event)">
                             </label>
-                            <button onclick="document.getElementById('videoUrlInput').focus()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition flex items-center gap-2">
-                                <i data-lucide="link" class="w-4 h-4"></i> Enter URL
-                            </button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Custom Overlay Controls Bar -->
                 <div class="p-4 bg-slate-900/90 border-t border-slate-800/80 flex flex-col gap-3">
-                    
-                    <!-- Progress Bar & Seek -->
                     <div class="flex items-center gap-3">
                         <span id="currentTimeDisplay" class="font-mono text-xs text-slate-400 min-w-[45px]">00:00</span>
                         <input type="range" id="seekSlider" min="0" max="100" value="0" step="0.1" class="w-full accent-blue-500 bg-slate-700 h-1.5 rounded-lg appearance-none cursor-pointer">
@@ -163,24 +144,15 @@
                             <button id="playPauseBtn" onclick="togglePlay()" class="p-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition shadow-md shadow-blue-600/20">
                                 <i data-lucide="play" id="playIcon" class="w-5 h-5 fill-current"></i>
                             </button>
-                            
-                            <button onclick="syncHostTime()" class="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition border border-slate-700" title="Resync to Host">
-                                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-                            </button>
 
-                            <div class="h-5 w-px bg-slate-800 mx-1"></div>
-
-                            <!-- Emoji Reaction Bar -->
                             <div class="flex items-center gap-1 bg-slate-800/60 p-1 rounded-xl border border-slate-700/50">
                                 <button onclick="sendEmoji('❤️')" class="px-2 py-1 hover:bg-slate-700/60 rounded-lg text-sm transition hover:scale-125">❤️</button>
                                 <button onclick="sendEmoji('🔥')" class="px-2 py-1 hover:bg-slate-700/60 rounded-lg text-sm transition hover:scale-125">🔥</button>
                                 <button onclick="sendEmoji('😂')" class="px-2 py-1 hover:bg-slate-700/60 rounded-lg text-sm transition hover:scale-125">😂</button>
-                                <button onclick="sendEmoji('😱')" class="px-2 py-1 hover:bg-slate-700/60 rounded-lg text-sm transition hover:scale-125">😱</button>
                                 <button onclick="sendEmoji('🎉')" class="px-2 py-1 hover:bg-slate-700/60 rounded-lg text-sm transition hover:scale-125">🎉</button>
                             </div>
                         </div>
 
-                        <!-- Direct Load Input -->
                         <div class="flex items-center gap-2 flex-1 max-w-md ml-auto">
                             <input type="text" id="videoUrlInput" placeholder="Paste YouTube link or Direct MP4 URL..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 transition">
                             <button onclick="loadVideoFromInput()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-white rounded-lg transition whitespace-nowrap">Load</button>
@@ -189,88 +161,29 @@
                 </div>
             </div>
 
-            <!-- Synchronization Latency & Drift Metrics Monitor -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 text-xs">
-                <div class="flex items-center gap-2">
-                    <span class="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg border border-blue-500/20">
-                        <i data-lucide="activity" class="w-4 h-4"></i>
-                    </span>
-                    <div>
-                        <div class="font-semibold text-slate-300">Sync Monitor</div>
-                        <div class="text-slate-500 text-[11px]">Real-time telemetry</div>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-6">
-                    <div>
-                        <div class="text-slate-500">Network Latency</div>
-                        <div id="latencyDisplay" class="font-mono font-bold text-emerald-400">18 ms</div>
-                    </div>
-                    <div>
-                        <div class="text-slate-500">Playback Drift</div>
-                        <div id="driftDisplay" class="font-mono font-bold text-blue-400">0 ms</div>
-                    </div>
-                    <div>
-                        <div class="text-slate-500">Sync Status</div>
-                        <div id="syncStatusDisplay" class="font-semibold text-emerald-400 flex items-center gap-1">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Synced
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Movie Discovery & Recommendations Section -->
+            <!-- Discovery Section -->
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-bold text-white flex items-center gap-2">
-                            <i data-lucide="compass" class="w-5 h-5 text-blue-500"></i> Movie & Video Discovery
+                            <i data-lucide="compass" class="w-5 h-5 text-blue-500"></i> Video Catalog
                         </h2>
-                        <p class="text-xs text-slate-400">Search catalog using fuzzy search or browse by category.</p>
+                        <p class="text-xs text-slate-400">Search catalog or choose sample streams to watch together.</p>
                     </div>
 
-                    <!-- Search Input & Filters -->
                     <div class="flex items-center gap-2">
-                        <div class="relative">
-                            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                            <input type="text" id="movieSearchInput" onkeyup="handleMovieSearch()" placeholder="Fuzzy search title..." class="bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 transition w-44">
-                        </div>
-                        <select id="genreFilter" onchange="handleMovieSearch()" class="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-blue-500">
-                            <option value="All">All Genres</option>
-                            <option value="Sci-Fi">Sci-Fi</option>
-                            <option value="Animation">Animation</option>
-                            <option value="Nature">Nature</option>
-                            <option value="Tech">Tech</option>
-                        </select>
+                        <input type="text" id="movieSearchInput" onkeyup="handleMovieSearch()" placeholder="Search title..." class="bg-slate-950 border border-slate-800 rounded-lg pl-3 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 transition w-44">
                     </div>
                 </div>
 
-                <!-- Movies Grid -->
-                <div id="moviesGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    <!-- Movie Cards dynamically inserted here -->
-                </div>
+                <div id="moviesGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
             </div>
 
         </div>
 
-        <!-- Right Column: Live Chat, Playlist & Polls (4 cols) -->
+        <!-- Right Column: Live Chat (4 cols) -->
         <div class="lg:col-span-4 flex flex-col gap-6">
-            
-            <!-- Tab Selection Bar -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-1.5 flex gap-1">
-                <button onclick="switchTab('chat')" id="tabBtnChat" class="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-blue-600 text-white transition flex items-center justify-center gap-1.5 shadow">
-                    <i data-lucide="message-square" class="w-3.5 h-3.5"></i> Chat
-                </button>
-                <button onclick="switchTab('playlist')" id="tabBtnPlaylist" class="flex-1 py-2 px-3 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition flex items-center justify-center gap-1.5">
-                    <i data-lucide="list-video" class="w-3.5 h-3.5"></i> Playlist
-                </button>
-                <button onclick="switchTab('polls')" id="tabBtnPolls" class="flex-1 py-2 px-3 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition flex items-center justify-center gap-1.5">
-                    <i data-lucide="vote" class="w-3.5 h-3.5"></i> Polls
-                </button>
-            </div>
-
-            <!-- Tab 1: Live Chat -->
-            <div id="tabContentChat" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col h-[560px]">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col h-[560px]">
                 <div class="pb-3 border-b border-slate-800 flex items-center justify-between">
                     <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
                         <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Room Live Chat
@@ -278,12 +191,8 @@
                     <span id="userBadge" class="text-[11px] bg-slate-800 border border-slate-700 px-2 py-0.5 rounded-full text-blue-400 font-mono">You</span>
                 </div>
 
-                <!-- Chat Feed -->
-                <div id="chatMessages" class="flex-1 overflow-y-auto my-3 pr-1 space-y-3 chat-scroll">
-                    <!-- Dynamic Messages -->
-                </div>
+                <div id="chatMessages" class="flex-1 overflow-y-auto my-3 pr-1 space-y-3 chat-scroll"></div>
 
-                <!-- Chat Input Form -->
                 <form onsubmit="sendChatMessage(event)" class="flex gap-2 pt-2 border-t border-slate-800">
                     <input type="text" id="chatInput" placeholder="Type a message..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 transition">
                     <button type="submit" class="p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition shadow-md shadow-blue-600/20">
@@ -291,53 +200,11 @@
                     </button>
                 </form>
             </div>
-
-            <!-- Tab 2: Shared Playlist -->
-            <div id="tabContentPlaylist" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex-col h-[560px]">
-                <div class="pb-3 border-b border-slate-800 flex items-center justify-between">
-                    <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Shared Queue</span>
-                    <button onclick="clearPlaylist()" class="text-[11px] text-red-400 hover:underline">Clear All</button>
-                </div>
-
-                <div id="playlistContainer" class="flex-1 overflow-y-auto my-3 space-y-2 chat-scroll">
-                    <!-- Queue items -->
-                </div>
-
-                <div class="flex gap-2 pt-2 border-t border-slate-800">
-                    <input type="text" id="addToPlaylistInput" placeholder="Add YouTube or Video URL..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 transition">
-                    <button onclick="addToPlaylistFromInput()" class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition">
-                        Add
-                    </button>
-                </div>
-            </div>
-
-            <!-- Tab 3: Group Polls -->
-            <div id="tabContentPolls" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex-col h-[560px]">
-                <div class="pb-3 border-b border-slate-800 flex items-center justify-between">
-                    <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Group Polls</span>
-                    <span class="text-[11px] text-slate-500">Vote on Next Movie</span>
-                </div>
-
-                <div id="activePollContainer" class="flex-1 overflow-y-auto my-3 space-y-3 chat-scroll">
-                    <!-- Active Poll Card -->
-                </div>
-
-                <!-- Create New Poll Box -->
-                <div class="pt-3 border-t border-slate-800 flex flex-col gap-2">
-                    <span class="text-xs font-semibold text-slate-400">Create New Poll</span>
-                    <input type="text" id="pollQuestionInput" placeholder="Poll question (e.g. What next?)..." class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500">
-                    <input type="text" id="pollOptionsInput" placeholder="Options separated by commas..." class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500">
-                    <button onclick="createNewPoll()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition shadow-md shadow-blue-600/20">
-                        Create Poll
-                    </button>
-                </div>
-            </div>
-
         </div>
 
     </main>
 
-    <!-- Modal for Room Management -->
+    <!-- Room Hub Modal -->
     <div id="roomModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
             <button onclick="closeRoomModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
@@ -345,21 +212,17 @@
             </button>
 
             <h3 class="text-xl font-bold text-white mb-1">Watch Room Hub</h3>
-            <p class="text-xs text-slate-400 mb-6">Create a new synchronized room or join an existing session.</p>
+            <p class="text-xs text-slate-400 mb-6">Create or join an existing session code.</p>
 
             <div class="space-y-4">
-                <!-- Create Room -->
                 <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl">
-                    <h4 class="text-sm font-semibold text-white mb-2">Host a Session</h4>
-                    <button onclick="createNewRoom()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-lg transition shadow-md shadow-blue-600/20 flex items-center justify-center gap-2">
+                    <button onclick="createNewRoom()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-lg transition flex items-center justify-center gap-2">
                         <i data-lucide="plus-circle" class="w-4 h-4"></i> Create New Room
                     </button>
                 </div>
 
-                <!-- Join Room -->
                 <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3">
-                    <h4 class="text-sm font-semibold text-white">Join Session</h4>
-                    <input type="text" id="joinRoomCodeInput" placeholder="Enter 6-character Room Code..." class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 uppercase font-mono tracking-widest">
+                    <input type="text" id="joinRoomCodeInput" placeholder="Enter 6-character Room Code..." class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white uppercase font-mono tracking-widest">
                     <button onclick="joinRoomFromInput()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold text-xs rounded-lg transition flex items-center justify-center gap-2">
                         <i data-lucide="log-in" class="w-4 h-4"></i> Join Room
                     </button>
@@ -368,39 +231,8 @@
         </div>
     </div>
 
-    <!-- Application JavaScript Logic -->
+    <!-- Application Script Logic -->
     <script>
-        // --- 1. FIREBASE CONFIGURATION & INITIALIZATION ---
-        // Replace the values below with your actual Firebase Console project settings!
-        const firebaseConfig = {
-            apiKey: "AIzaSyAaQvSQ3wgPoPghkZR1rqeehRIeRBj8mT8",
-            authDomain: "watch-party-app-4e3be.firebaseapp.com",
-            projectId: "watch-party-app-4e3be",
-            storageBucket: "watch-party-app-4e3be.firebasestorage.app",
-            messagingSenderId: "810367337897",
-            appId: "1:810367337897:web:d60e6837d1cec5260ff0b8"
-        };
-
-        let db = null;
-        let isFirebaseActive = false;
-
-        try {
-    if (firebaseConfig.apiKey !== "AIzaSyAaQvSQ3wgPoPghkZR1rqeehRIeRBj8mT8") {
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.firestore();
-        isFirebaseActive = true;
-        console.log("Firebase initialized successfully.");
-    } else {
-        console.warn("Firebase credentials not configured. Running in local BroadcastChannel mode.");
-    }
-} catch (e) {
-    console.error("Firebase init error:", e);
-}
-
-        // BroadcastChannel for local same-device multi-tab fallback
-        const broadcastChannel = new BroadcastChannel('watch_party_sync');
-
-        // --- 2. GLOBAL STATE ---
         let currentUser = {
             id: 'user_' + Math.random().toString(36).substr(2, 6),
             name: 'Viewer-' + Math.floor(1000 + Math.random() * 9000),
@@ -412,62 +244,50 @@
             hostId: null,
             videoState: {
                 url: '',
-                type: 'none', // 'youtube', 'mp4', 'local'
+                type: 'none',
                 isPlaying: false,
                 currentTime: 0,
                 lastUpdated: Date.now()
-            },
-            playlist: [],
-            poll: null
+            }
         };
 
-        let activePlayerType = 'none'; // 'native', 'yt'
-        let ytPlayerInstance = null;
+        let activePlayerType = 'none';
         let isInternalStateChange = false;
-        let roomUnsubscribe = null;
+        let unsubscribeRoomListener = null;
 
-        // Sample Movie Catalog for Discovery
         const movieCatalog = [
             { id: 1, title: 'Big Buck Bunny', genre: 'Animation', duration: '09:56', poster: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=400&q=80', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' },
             { id: 2, title: 'Elephant Dream', genre: 'Sci-Fi', duration: '10:53', poster: 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?auto=format&fit=crop&w=400&q=80', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4' },
-            { id: 3, title: 'For Bigger Blazes', genre: 'Nature', duration: '00:15', poster: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=400&q=80', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4' },
-            { id: 4, title: 'Tears of Steel', genre: 'Sci-Fi', duration: '12:14', poster: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=400&q=80', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },
-            { id: 5, title: 'Blender Tech Reel', genre: 'Tech', duration: '02:30', poster: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=400&q=80', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4' }
+            { id: 3, title: 'Tears of Steel', genre: 'Sci-Fi', duration: '12:14', poster: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=400&q=80', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' }
         ];
 
         let fuseInstance = new Fuse(movieCatalog, { keys: ['title', 'genre'], threshold: 0.4 });
 
-        // --- 3. INITIALIZATION ON DOM LOAD ---
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             document.getElementById('userBadge').innerText = currentUser.name;
-
-            // Render Movie Catalog
             renderMovies(movieCatalog);
 
-            // Check URL query for room code parameter
             const urlParams = new URLSearchParams(window.location.search);
             const roomParam = urlParams.get('room');
-            if (roomParam) {
-                joinRoom(roomParam.toUpperCase());
-            } else {
-                createNewRoom(); // Auto-host default room
-            }
+            
+            // Give Firebase module 800ms to initialize before joining room
+            setTimeout(() => {
+                if (roomParam) {
+                    joinRoom(roomParam.toUpperCase());
+                } else {
+                    createNewRoom();
+                }
+            }, 800);
 
-            // Setup Listeners
             setupVideoEventListeners();
-            setupBroadcastListeners();
-
-            // Periodic sync telemetry check
-            setInterval(updateTelemetry, 2000);
         });
 
-        // --- 4. ROOM MANAGEMENT LOGIC ---
         function generateRoomCode() {
             return Math.random().toString(36).substring(2, 8).toUpperCase();
         }
 
-        function createNewRoom() {
+        async function createNewRoom() {
             const code = generateRoomCode();
             currentUser.isHost = true;
             currentRoom.code = code;
@@ -475,17 +295,19 @@
 
             updateRoomUI();
             closeRoomModal();
-            addSystemChatMessage(`Room created! Code: ${code}. You are the host.`);
+            addSystemChatMessage(`Room created! Code: ${code}. Share link to watch together.`);
 
-            if (isFirebaseActive) {
-                db.collection('rooms').doc(code).set({
-                    created: Date.now(),
-                    hostId: currentUser.id,
-                    videoState: currentRoom.videoState,
-                    playlist: [],
-                    poll: null
-                });
-                subscribeToFirebaseRoom(code);
+            if (window.isFirebaseActive && window.db) {
+                try {
+                    await window.firebaseSetDoc(window.firebaseDoc(window.db, "rooms", code), {
+                        created: Date.now(),
+                        hostId: currentUser.id,
+                        videoState: currentRoom.videoState
+                    });
+                    subscribeToRoom(code);
+                } catch(e) {
+                    console.error("Firestore Error creating room:", e);
+                }
             }
         }
 
@@ -495,27 +317,22 @@
 
             updateRoomUI();
             closeRoomModal();
-            addSystemChatMessage(`Joined room ${code}. Requesting sync state...`);
+            addSystemChatMessage(`Joined room ${code}. Syncing state...`);
 
-            if (isFirebaseActive) {
-                subscribeToFirebaseRoom(code);
-            } else {
-                broadcastChannel.postMessage({ type: 'REQUEST_SYNC', roomCode: code, senderId: currentUser.id });
+            if (window.isFirebaseActive && window.db) {
+                subscribeToRoom(code);
             }
         }
 
         function joinRoomFromInput() {
             const val = document.getElementById('joinRoomCodeInput').value.trim().toUpperCase();
-            if (val.length >= 4) {
-                joinRoom(val);
-            }
+            if (val.length >= 4) joinRoom(val);
         }
 
         function updateRoomUI() {
             document.getElementById('roomNavInfo').classList.remove('hidden');
             document.getElementById('navRoomCode').innerText = currentRoom.code;
             
-            // Update URL without refresh
             const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?room=' + currentRoom.code;
             window.history.pushState({path: newUrl}, '', newUrl);
         }
@@ -528,69 +345,43 @@
         function openRoomModal() { document.getElementById('roomModal').classList.remove('hidden'); }
         function closeRoomModal() { document.getElementById('roomModal').classList.add('hidden'); }
 
-        // --- 5. REAL-TIME FIREBASE / BROADCAST SYNC ---
-        function subscribeToFirebaseRoom(code) {
-            if (roomUnsubscribe) roomUnsubscribe();
+        function subscribeToRoom(code) {
+            if (unsubscribeRoomListener) unsubscribeRoomListener();
 
-            roomUnsubscribe = db.collection('rooms').doc(code).onSnapshot((doc) => {
-                if (!doc.exists) return;
-                const data = doc.data();
-                
-                // Update room state if incoming timestamp is newer
-                if (data.videoState && (!isInternalStateChange)) {
+            unsubscribeRoomListener = window.firebaseOnSnapshot(window.firebaseDoc(window.db, "rooms", code), (docSnap) => {
+                if (!docSnap.exists()) return;
+                const data = docSnap.data();
+
+                if (data.videoState && !isInternalStateChange) {
                     applyRemoteVideoState(data.videoState);
                 }
-
-                if (data.playlist) renderPlaylist(data.playlist);
-                if (data.poll) renderPoll(data.poll);
             });
         }
 
-        function publishRoomState() {
+        async function publishRoomState() {
             if (isInternalStateChange) return;
-
             currentRoom.videoState.lastUpdated = Date.now();
 
-            if (isFirebaseActive && currentRoom.code) {
-                db.collection('rooms').doc(currentRoom.code).update({
-                    videoState: currentRoom.videoState
-                });
-            } else {
-                broadcastChannel.postMessage({
-                    type: 'SYNC_STATE',
-                    roomCode: currentRoom.code,
-                    videoState: currentRoom.videoState
-                });
-            }
-        }
-
-        function setupBroadcastListeners() {
-            broadcastChannel.onmessage = (event) => {
-                const data = event.data;
-                if (data.roomCode !== currentRoom.code) return;
-
-                if (data.type === 'SYNC_STATE') {
-                    applyRemoteVideoState(data.videoState);
-                } else if (data.type === 'CHAT_MSG') {
-                    renderChatMessage(data.message);
-                } else if (data.type === 'EMOJI') {
-                    triggerFloatingEmoji(data.emoji);
+            if (window.isFirebaseActive && window.db && currentRoom.code) {
+                try {
+                    await window.firebaseUpdateDoc(window.firebaseDoc(window.db, "rooms", currentRoom.code), {
+                        videoState: currentRoom.videoState
+                    });
+                } catch (e) {
+                    console.error("Error updating room state:", e);
                 }
-            };
+            }
         }
 
         function applyRemoteVideoState(state) {
             isInternalStateChange = true;
 
-            // Load video if URL changed
             if (state.url && state.url !== currentRoom.videoState.url) {
                 loadVideoSource(state.url, state.type);
             }
 
-            // Sync Playback state
             const player = getActivePlayer();
             if (player) {
-                // Calculate drift compensation
                 const calculatedTime = state.isPlaying ? state.currentTime + ((Date.now() - state.lastUpdated) / 1000) : state.currentTime;
                 
                 if (Math.abs(player.getCurrentTime() - calculatedTime) > 0.5) {
@@ -607,7 +398,6 @@
             setTimeout(() => { isInternalStateChange = false; }, 300);
         }
 
-        // --- 6. PLAYER ABSTRACTION & LOCAL FILE UPLOAD ---
         function loadVideoFromInput() {
             const url = document.getElementById('videoUrlInput').value.trim();
             if (!url) return;
@@ -649,12 +439,10 @@
                 nativeVideo.pause();
                 ytContainer.classList.remove('hidden');
 
-                // Extract YouTube ID
                 let ytId = '';
                 if (url.includes('v=')) ytId = url.split('v=')[1].split('&')[0];
                 else if (url.includes('youtu.be/')) ytId = url.split('youtu.be/')[1].split('?')[0];
 
-                // Use youtube-nocookie.com embed iframe to bypass Error 153 referrer issues
                 const iframe = document.getElementById('ytIframe');
                 iframe.src = `https://www.youtube-nocookie.com/embed/${ytId}?enablejsapi=1&autoplay=1&origin=${encodeURIComponent(window.location.origin)}`;
             } else {
@@ -679,7 +467,7 @@
                     getDuration: () => vid.duration || 0
                 };
             }
-            return null; // Fallback player handler
+            return null;
         }
 
         function togglePlay() {
@@ -725,11 +513,6 @@
             });
         }
 
-        function syncHostTime() {
-            publishRoomState();
-            addSystemChatMessage('Resynced to host time.');
-        }
-
         function formatTime(seconds) {
             if (isNaN(seconds)) return "00:00";
             const mins = Math.floor(seconds / 60);
@@ -737,19 +520,17 @@
             return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
 
-        // --- 7. MOVIE DISCOVERY & FUZZY SEARCH ---
         function renderMovies(movies) {
             const grid = document.getElementById('moviesGrid');
             grid.innerHTML = '';
 
             movies.forEach(movie => {
                 const card = document.createElement('div');
-                card.className = 'bg-slate-950 border border-slate-800 rounded-xl overflow-hidden hover:border-blue-500/50 transition group flex flex-col';
+                card.className = 'bg-slate-950 border border-slate-800 rounded-xl overflow-hidden hover:border-blue-500/50 transition flex flex-col';
                 card.innerHTML = `
                     <div class="relative aspect-video overflow-hidden">
-                        <img src="${movie.poster}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" alt="${movie.title}">
+                        <img src="${movie.poster}" class="w-full h-full object-cover" alt="${movie.title}">
                         <span class="absolute bottom-2 right-2 bg-black/80 px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-300">${movie.duration}</span>
-                        <span class="absolute top-2 left-2 bg-blue-600/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-semibold text-white">${movie.genre}</span>
                     </div>
                     <div class="p-3 flex-1 flex flex-col justify-between">
                         <h4 class="text-xs font-bold text-white mb-2 line-clamp-1">${movie.title}</h4>
@@ -765,18 +546,7 @@
 
         function handleMovieSearch() {
             const query = document.getElementById('movieSearchInput').value.trim();
-            const genre = document.getElementById('genreFilter').value;
-
-            let results = movieCatalog;
-
-            if (query) {
-                results = fuseInstance.search(query).map(res => res.item);
-            }
-
-            if (genre !== 'All') {
-                results = results.filter(m => m.genre === genre);
-            }
-
+            const results = query ? fuseInstance.search(query).map(res => res.item) : movieCatalog;
             renderMovies(results);
         }
 
@@ -788,10 +558,9 @@
 
             loadVideoSource(url, 'mp4');
             publishRoomState();
-            addSystemChatMessage(`Now playing from catalog.`);
+            addSystemChatMessage(`Now playing catalog item.`);
         }
 
-        // --- 8. CHAT & EMOJI REACTIONS ---
         function sendChatMessage(e) {
             e.preventDefault();
             const input = document.getElementById('chatInput');
@@ -806,10 +575,6 @@
 
             renderChatMessage(msgObj);
             input.value = '';
-
-            if (!isFirebaseActive) {
-                broadcastChannel.postMessage({ type: 'CHAT_MSG', roomCode: currentRoom.code, message: msgObj });
-            }
         }
 
         function renderChatMessage(msg) {
@@ -837,9 +602,6 @@
 
         function sendEmoji(emoji) {
             triggerFloatingEmoji(emoji);
-            if (!isFirebaseActive) {
-                broadcastChannel.postMessage({ type: 'EMOJI', roomCode: currentRoom.code, emoji });
-            }
         }
 
         function triggerFloatingEmoji(emoji) {
@@ -853,23 +615,31 @@
             container.appendChild(el);
             setTimeout(() => el.remove(), 2500);
         }
+    </script>
 
-        // --- 9. TABS & TELEMETRY ---
-        function switchTab(tabName) {
-            ['chat', 'playlist', 'polls'].forEach(t => {
-                document.getElementById(`tabContent${t.charAt(0).toUpperCase() + t.slice(1)}`).classList.add('hidden');
-                document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`).className = "flex-1 py-2 px-3 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition flex items-center justify-center gap-1.5";
-            });
+    <!-- Firebase v11 Modular SDK Setup -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
-            document.getElementById(`tabContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.remove('hidden');
-            document.getElementById(`tabContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('flex');
-            document.getElementById(`tabBtn${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).className = "flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-blue-600 text-white transition flex items-center justify-center gap-1.5 shadow";
-        }
+        const firebaseConfig = {
+            apiKey: "AIzaSyAaQvSQ3wgPoPghkZR1rqeehRIeRBj8mT8",
+            authDomain: "watch-party-app-4e3be.firebaseapp.com",
+            projectId: "watch-party-app-4e3be",
+            storageBucket: "watch-party-app-4e3be.firebasestorage.app",
+            messagingSenderId: "810367337897",
+            appId: "1:810367337897:web:488a0c26ad4263ae0ff0b8"
+        };
 
-        function updateTelemetry() {
-            const randomLatency = Math.floor(12 + Math.random() * 15);
-            document.getElementById('latencyDisplay').innerText = `${randomLatency} ms`;
-        }
+        const app = initializeApp(firebaseConfig);
+        window.db = getFirestore(app);
+        window.firebaseDoc = doc;
+        window.firebaseSetDoc = setDoc;
+        window.firebaseOnSnapshot = onSnapshot;
+        window.firebaseUpdateDoc = updateDoc;
+        window.isFirebaseActive = true;
+
+        console.log("Firebase initialized successfully (v11 Modular).");
     </script>
 </body>
 </html>
