@@ -385,17 +385,17 @@
         let isFirebaseActive = false;
 
         try {
-            if (firebaseConfig.apiKey !== "AIzaSyAaQvSQ3wgPoPghkZR1rqeehRIeRBj8mT8") {
-                firebase.initializeApp(firebaseConfig);
-                db = firebase.firestore();
-                isFirebaseActive = true;
-                console.log("Firebase initialized successfully.");
-            } else {
-                console.warn("Firebase credentials not configured. Running in local BroadcastChannel mode.");
-            }
-        } catch (e) {
-            console.error("Firebase init error:", e);
-        }
+    if (firebaseConfig.apiKey !== "AIzaSyAaQvSQ3wgPoPghkZR1rqeehRIeRBj8mT8") {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        isFirebaseActive = true;
+        console.log("Firebase initialized successfully.");
+    } else {
+        console.warn("Firebase credentials not configured. Running in local BroadcastChannel mode.");
+    }
+} catch (e) {
+    console.error("Firebase init error:", e);
+}
 
         // BroadcastChannel for local same-device multi-tab fallback
         const broadcastChannel = new BroadcastChannel('watch_party_sync');
