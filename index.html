@@ -107,7 +107,7 @@
 
                     <!-- YouTube Embed Frame -->
                     <div id="ytPlayerContainer" class="w-full h-full hidden">
-                        <iframe id="ytIframe" class="w-full h-full border-0" allow="autoplay; encrypted-media" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                        <div id="ytPlayer" class="w-full h-full"></div>
                     </div>
 
                     <!-- Placeholder -->
@@ -219,9 +219,7 @@
                 <div class="pb-3 border-b border-slate-800 flex items-center justify-between">
                     <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Connected Viewers</span>
                 </div>
-                <div id="participantsListContainer" class="flex-1 overflow-y-auto my-3 space-y-2 chat-scroll">
-                    <!-- Participant Items -->
-                </div>
+                <div id="participantsListContainer" class="flex-1 overflow-y-auto my-3 space-y-2 chat-scroll"></div>
             </div>
 
         </div>
@@ -255,6 +253,9 @@
         </div>
     </div>
 
+    <!-- YouTube Iframe API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+
     <!-- Application Script Logic -->
     <script>
         let currentUser = {
@@ -275,15 +276,17 @@
             }
         };
 
-        let activePlayerType = 'none';
+        let activePlayerType = 'none'; // 'native' or 'yt'
+        let ytPlayer = null;
+        let pendingYtUrl = '';
         let isInternalStateChange = false;
         let unsubscribeRoomListener = null;
         let unsubscribeChatListener = null;
         let unsubscribePresenceListener = null;
 
         const movieCatalog = [
-            { id: 1, title: 'Big Buck Bunny', genre: 'Animation', duration: '09:56', poster: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=400&q=80', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
-            { id: 2, title: 'HTML5 Sample Video', genre: 'Tech', duration: '00:10', poster: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=400&q=80', url: 'https://www.w3schools.com/html/mov_bbb.mp4' }
+            { id: 1, title: 'Big Buck Bunny (MP4)', genre: 'Animation', duration: '09:56', poster: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=400&q=80', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' },
+            { id: 2, title: 'Elephants Dream (MP4)', genre: 'Sci-Fi', duration: '10:53', poster: 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?auto=format&fit=crop&w=400&q=80', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4' }
         ];
 
         let fuseInstance = new Fuse(movieCatalog, { keys: ['title', 'genre'], threshold: 0.4 });
@@ -392,15 +395,14 @@
                 const messagesContainer = document.getElementById('chatMessages');
                 messagesContainer.innerHTML = '';
                 snapshot.forEach((doc) => {
-                    renderChatMessage(doc.data(), false);
+                    renderChatMessage(doc.data());
                 });
             });
 
-            // 3. Presence / Participants Tracker
+            // 3. Presence Tracker
             const presenceRef = window.firebaseDoc(window.db, "rooms", code, "presence", currentUser.id);
             window.firebaseSetDoc(presenceRef, { name: currentUser.name, lastSeen: Date.now() }, { merge: true });
 
-            // Heartbeat
             setInterval(() => {
                 if(window.isFirebaseActive && currentRoom.code) {
                     window.firebaseSetDoc(window.firebaseDoc(window.db, "rooms", currentRoom.code, "presence", currentUser.id), { name: currentUser.name, lastSeen: Date.now() }, { merge: true });
@@ -414,7 +416,7 @@
                 let count = 0;
                 snapshot.forEach((doc) => {
                     const user = doc.data();
-                    if (Date.now() - user.lastSeen < 20000) { // Active in last 20s
+                    if (Date.now() - user.lastSeen < 20000) {
                         count++;
                         const div = document.createElement('div');
                         div.className = 'flex items-center justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-xs';
@@ -429,6 +431,10 @@
 
         async function publishRoomState() {
             if (isInternalStateChange) return;
+            const player = getActivePlayer();
+            if (player) {
+                currentRoom.videoState.currentTime = player.getCurrentTime();
+            }
             currentRoom.videoState.lastUpdated = Date.now();
 
             if (window.isFirebaseActive && window.db && currentRoom.code) {
@@ -453,7 +459,7 @@
             if (player) {
                 const calculatedTime = state.isPlaying ? state.currentTime + ((Date.now() - state.lastUpdated) / 1000) : state.currentTime;
                 
-                if (Math.abs(player.getCurrentTime() - calculatedTime) > 0.8) {
+                if (Math.abs(player.getCurrentTime() - calculatedTime) > 1.0) {
                     player.seekTo(calculatedTime);
                 }
 
@@ -464,7 +470,7 @@
             currentRoom.videoState = state;
             updatePlayIcon(state.isPlaying);
             
-            setTimeout(() => { isInternalStateChange = false; }, 300);
+            setTimeout(() => { isInternalStateChange = false; }, 400);
         }
 
         function loadVideoFromInput() {
@@ -511,8 +517,32 @@
                 if (url.includes('v=')) ytId = url.split('v=')[1].split('&')[0];
                 else if (url.includes('youtu.be/')) ytId = url.split('youtu.be/')[1].split('?')[0];
 
-                const iframe = document.getElementById('ytIframe');
-                iframe.src = `https://www.youtube-nocookie.com/embed/${ytId}?enablejsapi=1&autoplay=1&origin=${encodeURIComponent(window.location.origin)}`;
+                if (window.YT && window.YT.Player) {
+                    if (ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
+                        ytPlayer.loadVideoById(ytId);
+                    } else {
+                        ytPlayer = new YT.Player('ytPlayer', {
+                            height: '100%',
+                            width: '100%',
+                            videoId: ytId,
+                            playerVars: { 'autoplay': 1, 'enablejsapi': 1 },
+                            events: {
+                                'onStateChange': (event) => {
+                                    if (isInternalStateChange) return;
+                                    if (event.data === YT.PlayerState.PLAYING) {
+                                        currentRoom.videoState.isPlaying = true;
+                                        publishRoomState();
+                                    } else if (event.data === YT.PlayerState.PAUSED) {
+                                        currentRoom.videoState.isPlaying = false;
+                                        publishRoomState();
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } else {
+                    pendingYtUrl = ytId;
+                }
             } else {
                 activePlayerType = 'native';
                 ytContainer.classList.add('hidden');
@@ -528,6 +558,12 @@
             }
         }
 
+        function onYouTubeIframeAPIReady() {
+            if (pendingYtUrl) {
+                loadVideoSource(pendingYtUrl, 'youtube', false);
+            }
+        }
+
         function getActivePlayer() {
             if (activePlayerType === 'native') {
                 const vid = document.getElementById('nativePlayer');
@@ -537,6 +573,14 @@
                     seekTo: (t) => { vid.currentTime = t; },
                     getCurrentTime: () => vid.currentTime,
                     getDuration: () => vid.duration || 0
+                };
+            } else if (activePlayerType === 'yt' && ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
+                return {
+                    play: () => ytPlayer.playVideo(),
+                    pause: () => ytPlayer.pauseVideo(),
+                    seekTo: (t) => ytPlayer.seekTo(t, true),
+                    getCurrentTime: () => ytPlayer.getCurrentTime() || 0,
+                    getDuration: () => ytPlayer.getDuration() || 0
                 };
             }
             return null;
@@ -577,12 +621,22 @@
             });
 
             seekSlider.addEventListener('input', (e) => {
-                if (!video.duration) return;
-                const seekTime = (e.target.value / 100) * video.duration;
-                video.currentTime = seekTime;
+                const player = getActivePlayer();
+                if (!player) return;
+                const duration = player.getDuration();
+                if (!duration) return;
+                const seekTime = (e.target.value / 100) * duration;
+                player.seekTo(seekTime);
                 currentRoom.videoState.currentTime = seekTime;
                 publishRoomState();
             });
+
+            // Periodic Sync Interval for Host / Active viewers
+            setInterval(() => {
+                if (currentRoom.videoState.isPlaying && currentUser.isHost) {
+                    publishRoomState();
+                }
+            }, 3000);
         }
 
         function syncHostTime() {
@@ -738,7 +792,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully (v11 Modular with Chat & Presence).");
+        console.log("Firebase initialized successfully (v11 Modular with Full Video Sync).");
     </script>
 </body>
 </html>
