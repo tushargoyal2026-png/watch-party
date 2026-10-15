@@ -28,21 +28,13 @@
     
     <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@latest"></script>
-
     <!-- Fuse.js for Fuzzy Search -->
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
 
     <style>
-        .chat-scroll::-webkit-scrollbar {
-            width: 6px;
-        }
-        .chat-scroll::-webkit-scrollbar-track {
-            background: #0f172a;
-        }
-        .chat-scroll::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 3px;
-        }
+        .chat-scroll::-webkit-scrollbar { width: 6px; }
+        .chat-scroll::-webkit-scrollbar-track { background: #0f172a; }
+        .chat-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
         .emoji-float {
             position: absolute;
             animation: floatUp 2.5s ease-out forwards;
@@ -81,6 +73,11 @@
                 <button onclick="copyInviteLink()" class="hover:text-blue-400 text-slate-400 transition flex items-center gap-1 text-xs font-medium">
                     <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Link
                 </button>
+                <div class="h-4 w-px bg-slate-700"></div>
+                <div class="flex items-center gap-1 text-xs text-slate-300">
+                    <i data-lucide="users" class="w-3.5 h-3.5 text-blue-400"></i>
+                    <span id="participantCount">1</span> Connected
+                </div>
             </div>
 
             <button onclick="openRoomModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition shadow-md shadow-blue-600/20 flex items-center gap-2">
@@ -145,6 +142,10 @@
                                 <i data-lucide="play" id="playIcon" class="w-5 h-5 fill-current"></i>
                             </button>
 
+                            <button onclick="syncHostTime()" class="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition border border-slate-700" title="Resync">
+                                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                            </button>
+
                             <div class="flex items-center gap-1 bg-slate-800/60 p-1 rounded-xl border border-slate-700/50">
                                 <button onclick="sendEmoji('❤️')" class="px-2 py-1 hover:bg-slate-700/60 rounded-lg text-sm transition hover:scale-125">❤️</button>
                                 <button onclick="sendEmoji('🔥')" class="px-2 py-1 hover:bg-slate-700/60 rounded-lg text-sm transition hover:scale-125">🔥</button>
@@ -154,7 +155,7 @@
                         </div>
 
                         <div class="flex items-center gap-2 flex-1 max-w-md ml-auto">
-                            <input type="text" id="videoUrlInput" placeholder="Paste YouTube link or Direct MP4 URL..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 transition">
+                            <input type="text" id="videoUrlInput" placeholder="Paste YouTube link or MP4 URL..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 transition">
                             <button onclick="loadVideoFromInput()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-white rounded-lg transition whitespace-nowrap">Load</button>
                         </div>
                     </div>
@@ -181,9 +182,21 @@
 
         </div>
 
-        <!-- Right Column: Live Chat (4 cols) -->
+        <!-- Right Column: Live Chat & Participants (4 cols) -->
         <div class="lg:col-span-4 flex flex-col gap-6">
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col h-[560px]">
+            
+            <!-- Tab Switcher -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-1.5 flex gap-1">
+                <button onclick="switchTab('chat')" id="tabBtnChat" class="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-blue-600 text-white transition flex items-center justify-center gap-1.5 shadow">
+                    <i data-lucide="message-square" class="w-3.5 h-3.5"></i> Chat
+                </button>
+                <button onclick="switchTab('participants')" id="tabBtnParticipants" class="flex-1 py-2 px-3 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition flex items-center justify-center gap-1.5">
+                    <i data-lucide="users" class="w-3.5 h-3.5"></i> Participants (<span id="tabParticipantCount">1</span>)
+                </button>
+            </div>
+
+            <!-- Tab 1: Chat -->
+            <div id="tabContentChat" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col h-[520px]">
                 <div class="pb-3 border-b border-slate-800 flex items-center justify-between">
                     <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
                         <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Room Live Chat
@@ -200,6 +213,17 @@
                     </button>
                 </form>
             </div>
+
+            <!-- Tab 2: Participants List -->
+            <div id="tabContentParticipants" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex-col h-[520px]">
+                <div class="pb-3 border-b border-slate-800 flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Connected Viewers</span>
+                </div>
+                <div id="participantsListContainer" class="flex-1 overflow-y-auto my-3 space-y-2 chat-scroll">
+                    <!-- Participant Items -->
+                </div>
+            </div>
+
         </div>
 
     </main>
@@ -254,11 +278,12 @@
         let activePlayerType = 'none';
         let isInternalStateChange = false;
         let unsubscribeRoomListener = null;
+        let unsubscribeChatListener = null;
+        let unsubscribePresenceListener = null;
 
         const movieCatalog = [
-            { id: 1, title: 'Big Buck Bunny', genre: 'Animation', duration: '09:56', poster: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=400&q=80', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' },
-            { id: 2, title: 'Elephant Dream', genre: 'Sci-Fi', duration: '10:53', poster: 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?auto=format&fit=crop&w=400&q=80', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4' },
-            { id: 3, title: 'Tears of Steel', genre: 'Sci-Fi', duration: '12:14', poster: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=400&q=80', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' }
+            { id: 1, title: 'Big Buck Bunny', genre: 'Animation', duration: '09:56', poster: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=400&q=80', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+            { id: 2, title: 'HTML5 Sample Video', genre: 'Tech', duration: '00:10', poster: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=400&q=80', url: 'https://www.w3schools.com/html/mov_bbb.mp4' }
         ];
 
         let fuseInstance = new Fuse(movieCatalog, { keys: ['title', 'genre'], threshold: 0.4 });
@@ -271,7 +296,6 @@
             const urlParams = new URLSearchParams(window.location.search);
             const roomParam = urlParams.get('room');
             
-            // Give Firebase module 800ms to initialize before joining room
             setTimeout(() => {
                 if (roomParam) {
                     joinRoom(roomParam.toUpperCase());
@@ -306,7 +330,7 @@
                     });
                     subscribeToRoom(code);
                 } catch(e) {
-                    console.error("Firestore Error creating room:", e);
+                    console.error("Firestore Error:", e);
                 }
             }
         }
@@ -347,7 +371,10 @@
 
         function subscribeToRoom(code) {
             if (unsubscribeRoomListener) unsubscribeRoomListener();
+            if (unsubscribeChatListener) unsubscribeChatListener();
+            if (unsubscribePresenceListener) unsubscribePresenceListener();
 
+            // 1. Room Sync Listener
             unsubscribeRoomListener = window.firebaseOnSnapshot(window.firebaseDoc(window.db, "rooms", code), (docSnap) => {
                 if (!docSnap.exists()) return;
                 const data = docSnap.data();
@@ -355,6 +382,48 @@
                 if (data.videoState && !isInternalStateChange) {
                     applyRemoteVideoState(data.videoState);
                 }
+            });
+
+            // 2. Chat Messages Listener
+            const chatColRef = window.firebaseCollection(window.db, "rooms", code, "messages");
+            const chatQuery = window.firebaseQuery(chatColRef, window.firebaseOrderBy("timestamp", "asc"));
+            
+            unsubscribeChatListener = window.firebaseOnSnapshot(chatQuery, (snapshot) => {
+                const messagesContainer = document.getElementById('chatMessages');
+                messagesContainer.innerHTML = '';
+                snapshot.forEach((doc) => {
+                    renderChatMessage(doc.data(), false);
+                });
+            });
+
+            // 3. Presence / Participants Tracker
+            const presenceRef = window.firebaseDoc(window.db, "rooms", code, "presence", currentUser.id);
+            window.firebaseSetDoc(presenceRef, { name: currentUser.name, lastSeen: Date.now() }, { merge: true });
+
+            // Heartbeat
+            setInterval(() => {
+                if(window.isFirebaseActive && currentRoom.code) {
+                    window.firebaseSetDoc(window.firebaseDoc(window.db, "rooms", currentRoom.code, "presence", currentUser.id), { name: currentUser.name, lastSeen: Date.now() }, { merge: true });
+                }
+            }, 10000);
+
+            const presenceCol = window.firebaseCollection(window.db, "rooms", code, "presence");
+            unsubscribePresenceListener = window.firebaseOnSnapshot(presenceCol, (snapshot) => {
+                const listContainer = document.getElementById('participantsListContainer');
+                listContainer.innerHTML = '';
+                let count = 0;
+                snapshot.forEach((doc) => {
+                    const user = doc.data();
+                    if (Date.now() - user.lastSeen < 20000) { // Active in last 20s
+                        count++;
+                        const div = document.createElement('div');
+                        div.className = 'flex items-center justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-xs';
+                        div.innerHTML = `<span class="font-medium text-white">${user.name}</span> <span class="text-[10px] text-emerald-400">Online</span>`;
+                        listContainer.appendChild(div);
+                    }
+                });
+                document.getElementById('participantCount').innerText = count;
+                document.getElementById('tabParticipantCount').innerText = count;
             });
         }
 
@@ -377,14 +446,14 @@
             isInternalStateChange = true;
 
             if (state.url && state.url !== currentRoom.videoState.url) {
-                loadVideoSource(state.url, state.type);
+                loadVideoSource(state.url, state.type, false);
             }
 
             const player = getActivePlayer();
             if (player) {
                 const calculatedTime = state.isPlaying ? state.currentTime + ((Date.now() - state.lastUpdated) / 1000) : state.currentTime;
                 
-                if (Math.abs(player.getCurrentTime() - calculatedTime) > 0.5) {
+                if (Math.abs(player.getCurrentTime() - calculatedTime) > 0.8) {
                     player.seekTo(calculatedTime);
                 }
 
@@ -410,8 +479,7 @@
             currentRoom.videoState.currentTime = 0;
             currentRoom.videoState.isPlaying = true;
 
-            loadVideoSource(url, type);
-            publishRoomState();
+            loadVideoSource(url, type, true);
         }
 
         function handleLocalFileUpload(event) {
@@ -424,11 +492,11 @@
             currentRoom.videoState.currentTime = 0;
             currentRoom.videoState.isPlaying = true;
 
-            loadVideoSource(fileUrl, 'local');
+            loadVideoSource(fileUrl, 'local', true);
             addSystemChatMessage(`Loaded local file: ${file.name}`);
         }
 
-        function loadVideoSource(url, type) {
+        function loadVideoSource(url, type, shouldPublish = true) {
             document.getElementById('playerPlaceholder').classList.add('hidden');
             const nativeVideo = document.getElementById('nativePlayer');
             const ytContainer = document.getElementById('ytPlayerContainer');
@@ -454,13 +522,17 @@
                 nativeVideo.load();
                 nativeVideo.play();
             }
+
+            if (shouldPublish) {
+                publishRoomState();
+            }
         }
 
         function getActivePlayer() {
             if (activePlayerType === 'native') {
                 const vid = document.getElementById('nativePlayer');
                 return {
-                    play: () => vid.play(),
+                    play: () => vid.play().catch(e => console.log(e)),
                     pause: () => vid.pause(),
                     seekTo: (t) => { vid.currentTime = t; },
                     getCurrentTime: () => vid.currentTime,
@@ -513,6 +585,11 @@
             });
         }
 
+        function syncHostTime() {
+            publishRoomState();
+            addSystemChatMessage('Resynced to host time.');
+        }
+
         function formatTime(seconds) {
             if (isNaN(seconds)) return "00:00";
             const mins = Math.floor(seconds / 60);
@@ -556,12 +633,11 @@
             currentRoom.videoState.currentTime = 0;
             currentRoom.videoState.isPlaying = true;
 
-            loadVideoSource(url, 'mp4');
-            publishRoomState();
+            loadVideoSource(url, 'mp4', true);
             addSystemChatMessage(`Now playing catalog item.`);
         }
 
-        function sendChatMessage(e) {
+        async function sendChatMessage(e) {
             e.preventDefault();
             const input = document.getElementById('chatInput');
             const msgText = input.value.trim();
@@ -570,11 +646,19 @@
             const msgObj = {
                 sender: currentUser.name,
                 text: msgText,
+                timestamp: Date.now(),
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             };
 
-            renderChatMessage(msgObj);
             input.value = '';
+
+            if (window.isFirebaseActive && window.db && currentRoom.code) {
+                try {
+                    await window.firebaseAddDoc(window.firebaseCollection(window.db, "rooms", currentRoom.code, "messages"), msgObj);
+                } catch (e) {
+                    console.error("Error sending message:", e);
+                }
+            }
         }
 
         function renderChatMessage(msg) {
@@ -615,12 +699,23 @@
             container.appendChild(el);
             setTimeout(() => el.remove(), 2500);
         }
+
+        function switchTab(tabName) {
+            ['chat', 'participants'].forEach(t => {
+                document.getElementById(`tabContent${t.charAt(0).toUpperCase() + t.slice(1)}`).classList.add('hidden');
+                document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`).className = "flex-1 py-2 px-3 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition flex items-center justify-center gap-1.5";
+            });
+
+            document.getElementById(`tabContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.remove('hidden');
+            document.getElementById(`tabContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('flex');
+            document.getElementById(`tabBtn${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).className = "flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-blue-600 text-white transition flex items-center justify-center gap-1.5 shadow";
+        }
     </script>
 
     <!-- Firebase v11 Modular SDK Setup -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-        import { getFirestore, doc, setDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, collection, addDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAaQvSQ3wgPoPghkZR1rqeehRIeRBj8mT8",
@@ -637,9 +732,13 @@
         window.firebaseSetDoc = setDoc;
         window.firebaseOnSnapshot = onSnapshot;
         window.firebaseUpdateDoc = updateDoc;
+        window.firebaseCollection = collection;
+        window.firebaseAddDoc = addDoc;
+        window.firebaseQuery = query;
+        window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully (v11 Modular).");
+        console.log("Firebase initialized successfully (v11 Modular with Chat & Presence).");
     </script>
 </body>
 </html>
