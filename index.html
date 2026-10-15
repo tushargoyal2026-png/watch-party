@@ -49,182 +49,231 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-blue-600 selection:text-white">
 
-    <!-- Header Navigation -->
-    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <!-- ================= WELCOME & ONBOARDING VIEW ================= -->
+    <div id="welcomeView" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl relative overflow-hidden flex flex-col gap-6">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+            
             <div class="flex items-center gap-3">
-                <div class="p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/30">
-                    <i data-lucide="tv" class="w-6 h-6 text-white"></i>
+                <div class="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-500/30">
+                    <i data-lucide="tv" class="w-8 h-8 text-white"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                        WatchParty
-                        <span class="text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full font-medium">Real-Time</span>
-                    </h1>
+                    <h1 class="text-2xl font-bold tracking-tight text-white">WatchParty</h1>
+                    <p class="text-xs text-slate-400">Synchronized video & chat with friends</p>
                 </div>
             </div>
 
-            <!-- Global Action Header / Room Status -->
-            <div id="roomNavInfo" class="hidden flex items-center gap-4 bg-slate-800/80 border border-slate-700/60 rounded-full px-4 py-1.5">
-                <div class="flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span id="navRoomCode" class="font-mono text-sm font-bold text-white">------</span>
+            <div class="space-y-4">
+                <!-- Username Input -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Your Unique Username</label>
+                    <input type="text" id="onboardUsernameInput" placeholder="Enter your name..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition font-medium">
                 </div>
-                <button onclick="copyInviteLink()" class="hover:text-blue-400 text-slate-400 transition flex items-center gap-1 text-xs font-medium">
-                    <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Link
-                </button>
-                <div class="h-4 w-px bg-slate-700"></div>
-                <div class="flex items-center gap-1 text-xs text-slate-300">
-                    <i data-lucide="users" class="w-3.5 h-3.5 text-blue-400"></i>
-                    <span id="participantCount">1</span> Connected
+
+                <!-- Action Tabs / Choices -->
+                <div class="grid grid-cols-2 gap-3 pt-2">
+                    <button onclick="handleOnboardCreateRoom()" class="p-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition flex flex-col items-center justify-center gap-2 shadow-lg shadow-blue-600/20 group">
+                        <i data-lucide="plus-circle" class="w-6 h-6 group-hover:scale-110 transition"></i>
+                        <span class="text-xs font-bold">Create Room</span>
+                    </button>
+
+                    <button onclick="toggleJoinPanel()" class="p-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-xl transition flex flex-col items-center justify-center gap-2 group">
+                        <i data-lucide="log-in" class="w-6 h-6 text-blue-400 group-hover:scale-110 transition"></i>
+                        <span class="text-xs font-bold">Join Room</span>
+                    </button>
+                </div>
+
+                <!-- Hidden Join Room Code Input Container -->
+                <div id="joinCodeContainer" class="hidden space-y-3 pt-2 border-t border-slate-800">
+                    <input type="text" id="onboardRoomCodeInput" placeholder="Enter 6-char Room Code..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white uppercase font-mono tracking-widest text-center focus:outline-none focus:border-blue-500 transition">
+                    <button onclick="handleOnboardJoinRoom()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-xl transition shadow-lg shadow-emerald-600/20">
+                        Connect & Enter Room
+                    </button>
                 </div>
             </div>
-
-            <button onclick="openRoomModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition shadow-md shadow-blue-600/20 flex items-center gap-2">
-                <i data-lucide="plus-circle" class="w-4 h-4"></i> Room Management
-            </button>
         </div>
-    </header>
+    </div>
 
-    <!-- Main Container -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-        <!-- Left Column: Player & Discovery (8 cols) -->
-        <div class="lg:col-span-8 flex flex-col gap-6">
-            
-            <!-- Video Player Section -->
-            <div class="relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-                
-                <div id="emojiOverlay" class="absolute inset-0 pointer-events-none overflow-hidden z-30"></div>
-
-                <div class="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
-                    
-                    <!-- HTML5 Native Video Player -->
-                    <video id="nativePlayer" class="w-full h-full object-contain hidden" crossorigin="anonymous">
-                        <source id="nativeSource" src="" type="video/mp4">
-                        Your browser does not support HTML5 video.
-                    </video>
-
-                    <!-- YouTube Embed Frame -->
-                    <div id="ytPlayerContainer" class="w-full h-full hidden">
-                        <div id="ytPlayer" class="w-full h-full"></div>
+    <!-- ================= MAIN APP VIEW (Initially Hidden) ================= -->
+    <div id="mainAppView" class="hidden flex-1 flex flex-col min-h-screen">
+        <!-- Header Navigation -->
+        <header class="border-b border-slate-800 bg-slate-900/85 backdrop-blur sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/30">
+                        <i data-lucide="tv" class="w-6 h-6 text-white"></i>
                     </div>
-
-                    <!-- Placeholder -->
-                    <div id="playerPlaceholder" class="flex flex-col items-center justify-center p-8 text-center">
-                        <div class="w-16 h-16 bg-slate-800/80 rounded-2xl flex items-center justify-center mb-4 text-slate-400">
-                            <i data-lucide="film" class="w-8 h-8"></i>
-                        </div>
-                        <h3 class="text-lg font-semibold text-white mb-1">No Video Loaded</h3>
-                        <p class="text-sm text-slate-400 max-w-md mb-4">Paste a YouTube link, MP4 URL, or upload a local video file to start watching together across devices.</p>
-                        
-                        <div class="flex flex-wrap items-center justify-center gap-3">
-                            <label class="cursor-pointer px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-medium border border-slate-700 flex items-center gap-2 transition">
-                                <i data-lucide="upload" class="w-4 h-4 text-blue-400"></i>
-                                Upload Video File
-                                <input type="file" id="localFileInput" accept="video/mp4,video/webm,video/ogg,video/mkv" class="hidden" onchange="handleLocalFileUpload(event)">
-                            </label>
-                        </div>
+                    <div>
+                        <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                            WatchParty
+                            <span class="text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full font-medium">Real-Time</span>
+                        </h1>
                     </div>
                 </div>
 
-                <!-- Custom Overlay Controls Bar -->
-                <div class="p-4 bg-slate-900/90 border-t border-slate-800/80 flex flex-col gap-3">
-                    <div class="flex items-center gap-3">
-                        <span id="currentTimeDisplay" class="font-mono text-xs text-slate-400 min-w-[45px]">00:00</span>
-                        <input type="range" id="seekSlider" min="0" max="100" value="0" step="0.1" class="w-full accent-blue-500 bg-slate-700 h-1.5 rounded-lg appearance-none cursor-pointer">
-                        <span id="durationDisplay" class="font-mono text-xs text-slate-400 min-w-[45px]">00:00</span>
+                <!-- Global Action Header / Room Status -->
+                <div id="roomNavInfo" class="flex items-center gap-4 bg-slate-800/80 border border-slate-700/60 rounded-full px-4 py-1.5">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span id="navRoomCode" class="font-mono text-sm font-bold text-white">------</span>
                     </div>
+                    <button onclick="copyInviteLink()" class="hover:text-blue-400 text-slate-400 transition flex items-center gap-1 text-xs font-medium">
+                        <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Link
+                    </button>
+                    <div class="h-4 w-px bg-slate-700"></div>
+                    <div class="flex items-center gap-1 text-xs text-slate-300">
+                        <i data-lucide="users" class="w-3.5 h-3.5 text-blue-400"></i>
+                        <span id="participantCount">1</span> Connected
+                    </div>
+                </div>
 
-                    <div class="flex items-center justify-between flex-wrap gap-2">
-                        <div class="flex items-center gap-2">
-                            <button id="playPauseBtn" onclick="togglePlay()" class="p-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition shadow-md shadow-blue-600/20">
-                                <i data-lucide="play" id="playIcon" class="w-5 h-5 fill-current"></i>
-                            </button>
+                <button onclick="openRoomModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition shadow-md shadow-blue-600/20 flex items-center gap-2">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> Room Management
+                </button>
+            </div>
+        </header>
 
-                            <button onclick="syncHostTime()" class="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition border border-slate-700" title="Resync">
-                                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-                            </button>
+        <!-- Main Container -->
+        <main class="flex-1 max-w-7xl w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-                            <div class="flex items-center gap-1 bg-slate-800/60 p-1 rounded-xl border border-slate-700/50">
-                                <button onclick="sendEmoji('❤️')" class="px-2 py-1 hover:bg-slate-700/60 rounded-lg text-sm transition hover:scale-125">❤️</button>
-                                <button onclick="sendEmoji('🔥')" class="px-2 py-1 hover:bg-slate-700/60 rounded-lg text-sm transition hover:scale-125">🔥</button>
-                                <button onclick="sendEmoji('😂')" class="px-2 py-1 hover:bg-slate-700/60 rounded-lg text-sm transition hover:scale-125">😂</button>
-                                <button onclick="sendEmoji('🎉')" class="px-2 py-1 hover:bg-slate-700/60 rounded-lg text-sm transition hover:scale-125">🎉</button>
+            <!-- Left Column: Player & Discovery (8 cols) -->
+            <div class="lg:col-span-8 flex flex-col gap-6">
+                
+                <!-- Video Player Section -->
+                <div class="relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+                    
+                    <div id="emojiOverlay" class="absolute inset-0 pointer-events-none overflow-hidden z-30"></div>
+
+                    <div class="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
+                        
+                        <!-- HTML5 Native Video Player -->
+                        <video id="nativePlayer" class="w-full h-full object-contain hidden" crossorigin="anonymous">
+                            <source id="nativeSource" src="" type="video/mp4">
+                            Your browser does not support HTML5 video.
+                        </video>
+
+                        <!-- YouTube Embed Frame -->
+                        <div id="ytPlayerContainer" class="w-full h-full hidden">
+                            <div id="ytPlayer" class="w-full h-full"></div>
+                        </div>
+
+                        <!-- Placeholder -->
+                        <div id="playerPlaceholder" class="flex flex-col items-center justify-center p-8 text-center">
+                            <div class="w-16 h-16 bg-slate-800/80 rounded-2xl flex items-center justify-center mb-4 text-slate-400">
+                                <i data-lucide="film" class="w-8 h-8"></i>
+                            </div>
+                            <h3 class="text-lg font-semibold text-white mb-1">No Video Loaded</h3>
+                            <p class="text-sm text-slate-400 max-w-md mb-4">Paste a YouTube link, MP4 URL, or upload a local video file to start watching together across devices.</p>
+                            
+                            <div class="flex flex-wrap items-center justify-center gap-3">
+                                <label class="cursor-pointer px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-medium border border-slate-700 flex items-center gap-2 transition">
+                                    <i data-lucide="upload" class="w-4 h-4 text-blue-400"></i>
+                                    Upload Video File
+                                    <input type="file" id="localFileInput" accept="video/mp4,video/webm,video/ogg,video/mkv" class="hidden" onchange="handleLocalFileUpload(event)">
+                                </label>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="flex items-center gap-2 flex-1 max-w-md ml-auto">
-                            <input type="text" id="videoUrlInput" placeholder="Paste YouTube link or MP4 URL..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 transition">
-                            <button onclick="loadVideoFromInput()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-white rounded-lg transition whitespace-nowrap">Load</button>
+                    <!-- Custom Overlay Controls Bar -->
+                    <div class="p-4 bg-slate-900/90 border-t border-slate-800/80 flex flex-col gap-3">
+                        <div class="flex items-center gap-3">
+                            <span id="currentTimeDisplay" class="font-mono text-xs text-slate-400 min-w-[45px]">00:00</span>
+                            <input type="range" id="seekSlider" min="0" max="100" value="0" step="0.1" class="w-full accent-blue-500 bg-slate-700 h-1.5 rounded-lg appearance-none cursor-pointer">
+                            <span id="durationDisplay" class="font-mono text-xs text-slate-400 min-w-[45px]">00:00</span>
+                        </div>
+
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <div class="flex items-center gap-2">
+                                <button id="playPauseBtn" onclick="togglePlay()" class="p-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition shadow-md shadow-blue-600/20">
+                                    <i data-lucide="play" id="playIcon" class="w-5 h-5 fill-current"></i>
+                                </button>
+
+                                <button onclick="syncHostTime()" class="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition border border-slate-700" title="Resync">
+                                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                                </button>
+
+                                <div class="flex items-center gap-1 bg-slate-800/60 p-1 rounded-xl border border-slate-700/50">
+                                    <button onclick="sendEmoji('❤️')" class="px-2 py-1 hover:bg-slate-700/60 rounded-lg text-sm transition hover:scale-125">❤️</button>
+                                    <button onclick="sendEmoji('🔥')" class="px-2 py-1 hover:bg-slate-700/60 rounded-lg text-sm transition hover:scale-125">🔥</button>
+                                    <button onclick="sendEmoji('😂')" class="px-2 py-1 hover:bg-slate-700/60 rounded-lg text-sm transition hover:scale-125">😂</button>
+                                    <button onclick="sendEmoji('🎉')" class="px-2 py-1 hover:bg-slate-700/60 rounded-lg text-sm transition hover:scale-125">🎉</button>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2 flex-1 max-w-md ml-auto">
+                                <input type="text" id="videoUrlInput" placeholder="Paste YouTube link or MP4 URL..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 transition">
+                                <button onclick="loadVideoFromInput()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-white rounded-lg transition whitespace-nowrap">Load</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Discovery Section -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
-                            <i data-lucide="compass" class="w-5 h-5 text-blue-500"></i> Video Catalog
-                        </h2>
-                        <p class="text-xs text-slate-400">Search catalog or choose sample streams to watch together.</p>
+                <!-- Discovery Section -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i data-lucide="compass" class="w-5 h-5 text-blue-500"></i> Video Catalog
+                            </h2>
+                            <p class="text-xs text-slate-400">Search catalog or choose sample streams to watch together.</p>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="movieSearchInput" onkeyup="handleMovieSearch()" placeholder="Search title..." class="bg-slate-950 border border-slate-800 rounded-lg pl-3 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 transition w-44">
+                        </div>
                     </div>
 
-                    <div class="flex items-center gap-2">
-                        <input type="text" id="movieSearchInput" onkeyup="handleMovieSearch()" placeholder="Search title..." class="bg-slate-950 border border-slate-800 rounded-lg pl-3 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 transition w-44">
-                    </div>
+                    <div id="moviesGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
                 </div>
 
-                <div id="moviesGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
             </div>
 
-        </div>
-
-        <!-- Right Column: Live Chat & Participants (4 cols) -->
-        <div class="lg:col-span-4 flex flex-col gap-6">
-            
-            <!-- Tab Switcher -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-1.5 flex gap-1">
-                <button onclick="switchTab('chat')" id="tabBtnChat" class="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-blue-600 text-white transition flex items-center justify-center gap-1.5 shadow">
-                    <i data-lucide="message-square" class="w-3.5 h-3.5"></i> Chat
-                </button>
-                <button onclick="switchTab('participants')" id="tabBtnParticipants" class="flex-1 py-2 px-3 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition flex items-center justify-center gap-1.5">
-                    <i data-lucide="users" class="w-3.5 h-3.5"></i> Participants (<span id="tabParticipantCount">1</span>)
-                </button>
-            </div>
-
-            <!-- Tab 1: Chat -->
-            <div id="tabContentChat" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col h-[520px]">
-                <div class="pb-3 border-b border-slate-800 flex items-center justify-between">
-                    <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Room Live Chat
-                    </span>
-                    <span id="userBadge" class="text-[11px] bg-slate-800 border border-slate-700 px-2 py-0.5 rounded-full text-blue-400 font-mono">You</span>
-                </div>
-
-                <div id="chatMessages" class="flex-1 overflow-y-auto my-3 pr-1 space-y-3 chat-scroll"></div>
-
-                <form onsubmit="sendChatMessage(event)" class="flex gap-2 pt-2 border-t border-slate-800">
-                    <input type="text" id="chatInput" placeholder="Type a message..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 transition">
-                    <button type="submit" class="p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition shadow-md shadow-blue-600/20">
-                        <i data-lucide="send" class="w-4 h-4"></i>
+            <!-- Right Column: Live Chat & Participants (4 cols) -->
+            <div class="lg:col-span-4 flex flex-col gap-6">
+                
+                <!-- Tab Switcher -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-1.5 flex gap-1">
+                    <button onclick="switchTab('chat')" id="tabBtnChat" class="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-blue-600 text-white transition flex items-center justify-center gap-1.5 shadow">
+                        <i data-lucide="message-square" class="w-3.5 h-3.5"></i> Chat
                     </button>
-                </form>
-            </div>
-
-            <!-- Tab 2: Participants List -->
-            <div id="tabContentParticipants" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex-col h-[520px]">
-                <div class="pb-3 border-b border-slate-800 flex items-center justify-between">
-                    <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Connected Viewers</span>
+                    <button onclick="switchTab('participants')" id="tabBtnParticipants" class="flex-1 py-2 px-3 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition flex items-center justify-center gap-1.5">
+                        <i data-lucide="users" class="w-3.5 h-3.5"></i> Participants (<span id="tabParticipantCount">1</span>)
+                    </button>
                 </div>
-                <div id="participantsListContainer" class="flex-1 overflow-y-auto my-3 space-y-2 chat-scroll"></div>
+
+                <!-- Tab 1: Chat -->
+                <div id="tabContentChat" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col h-[520px]">
+                    <div class="pb-3 border-b border-slate-800 flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Room Live Chat
+                        </span>
+                        <span id="userBadge" class="text-[11px] bg-slate-800 border border-slate-700 px-2 py-0.5 rounded-full text-blue-400 font-mono">You</span>
+                    </div>
+
+                    <div id="chatMessages" class="flex-1 overflow-y-auto my-3 pr-1 space-y-3 chat-scroll"></div>
+
+                    <form onsubmit="sendChatMessage(event)" class="flex gap-2 pt-2 border-t border-slate-800">
+                        <input type="text" id="chatInput" placeholder="Type a message..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 transition">
+                        <button type="submit" class="p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition shadow-md shadow-blue-600/20">
+                            <i data-lucide="send" class="w-4 h-4"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Tab 2: Participants List -->
+                <div id="tabContentParticipants" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex-col h-[520px]">
+                    <div class="pb-3 border-b border-slate-800 flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Connected Viewers</span>
+                    </div>
+                    <div id="participantsListContainer" class="flex-1 overflow-y-auto my-3 space-y-2 chat-scroll"></div>
+                </div>
+
             </div>
 
-        </div>
-
-    </main>
+        </main>
+    </div>
 
     <!-- Room Hub Modal -->
     <div id="roomModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
@@ -260,7 +309,7 @@
     <script>
         let currentUser = {
             id: 'user_' + Math.random().toString(36).substr(2, 6),
-            name: 'Viewer-' + Math.floor(1000 + Math.random() * 9000),
+            name: '',
             isHost: false
         };
 
@@ -293,22 +342,59 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
-            document.getElementById('userBadge').innerText = currentUser.name;
             renderMovies(movieCatalog);
 
+            // Pre-fill default username or URL room if present
+            document.getElementById('onboardUsernameInput').value = 'Viewer-' + Math.floor(1000 + Math.random() * 9000);
+            
             const urlParams = new URLSearchParams(window.location.search);
             const roomParam = urlParams.get('room');
-            
-            setTimeout(() => {
-                if (roomParam) {
-                    joinRoom(roomParam.toUpperCase());
-                } else {
-                    createNewRoom();
-                }
-            }, 800);
+            if (roomParam) {
+                document.getElementById('onboardRoomCodeInput').value = roomParam.toUpperCase();
+                toggleJoinPanel();
+            }
 
             setupVideoEventListeners();
         });
+
+        function toggleJoinPanel() {
+            const container = document.getElementById('joinCodeContainer');
+            container.classList.toggle('hidden');
+        }
+
+        function validateOnboardUser() {
+            const nameInput = document.getElementById('onboardUsernameInput').value.trim();
+            if (!nameInput) {
+                alert('Please enter a unique username to continue!');
+                return false;
+            }
+            currentUser.name = nameInput;
+            document.getElementById('userBadge').innerText = currentUser.name;
+            return true;
+        }
+
+        function enterMainApp() {
+            document.getElementById('welcomeView').classList.add('hidden');
+            document.getElementById('mainAppView').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        async function handleOnboardCreateRoom() {
+            if (!validateOnboardUser()) return;
+            enterMainApp();
+            await createNewRoom();
+        }
+
+        async function handleOnboardJoinRoom() {
+            if (!validateOnboardUser()) return;
+            const code = document.getElementById('onboardRoomCodeInput').value.trim().toUpperCase();
+            if (!code || code.length < 4) {
+                alert('Please enter a valid 6-character room code!');
+                return;
+            }
+            enterMainApp();
+            joinRoom(code);
+        }
 
         function generateRoomCode() {
             return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -631,7 +717,6 @@
                 publishRoomState();
             });
 
-            // Periodic Sync Interval for Host / Active viewers
             setInterval(() => {
                 if (currentRoom.videoState.isPlaying && currentUser.isHost) {
                     publishRoomState();
@@ -792,7 +877,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully (v11 Modular with Full Video Sync).");
+        console.log("Firebase initialized successfully (v11 Modular with Onboarding).");
     </script>
 </body>
 </html>
