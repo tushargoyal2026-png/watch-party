@@ -732,7 +732,7 @@
             const player = getActivePlayer();
             if (!player) {
                 loadVideoSource(state.url, state.type, false);
-                document.getElementById('syncPromptBanner').classList.remove('hidden');
+                // Only show sync prompt if user hasn't already dismissed it or isn't host
                 setTimeout(() => { isInternalStateChange = false; }, 400);
                 return;
             }
@@ -758,7 +758,7 @@
         }
 
         function executeUnmuteAndPlay() {
-            // Always hide the sync prompt banner immediately
+            // Permanently hide the sync prompt banner immediately
             document.getElementById('syncPromptBanner').classList.add('hidden');
             
             if (ytPlayer && typeof ytPlayer.unMute === 'function') {
@@ -949,7 +949,7 @@
                             },
                             events: {
                                 'onReady': (event) => {
-                                    document.getElementById('syncPromptBanner').classList.remove('hidden');
+                                    // Do not force show banner here if player is ready
                                     if (pendingRemoteState) {
                                         const elapsed = pendingRemoteState.isPlaying ? (Date.now() - pendingRemoteState.lastUpdated) / 1000 : 0;
                                         const target = pendingRemoteState.currentTime + elapsed;
@@ -1140,7 +1140,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully with global banner dismissal fix.");
+        console.log("Firebase initialized successfully with final banner dismissal fix.");
     </script>
 </body>
 </html>
