@@ -467,7 +467,8 @@
         let ytPlayer = null;
         let pendingYtUrl = '';
         let pendingRemoteState = null;
-        let isApplyingRemoteState = false; 
+        let isLocalAction = false; // Prevents recursive loops
+        let localActionTimeout = null;
         let unsubscribeRoomListener = null;
         let unsubscribeChatListener = null;
         let unsubscribePresenceListener = null;
@@ -645,7 +646,8 @@
                 if (!docSnap.exists()) return;
                 const data = docSnap.data();
 
-                if (data.videoState && !isApplyingRemoteState) {
+                // Only apply if the update came from another user (not locked by local action)
+                if (data.videoState && !isLocalAction) {
                     applyRemoteVideoState(data.videoState);
                 }
             });
@@ -723,9 +725,17 @@
             }
         }
 
+        // Lock local mutations for 1 second to prevent bounce-back loops
+        function triggerLocalLock() {
+            isLocalAction = true;
+            if (localActionTimeout) clearTimeout(localActionTimeout);
+            localActionTimeout = setTimeout(() => {
+                isLocalAction = false;
+            }, 1000);
+        }
+
         function applyRemoteVideoState(state) {
             if (!state || !state.url) return;
-            isApplyingRemoteState = true;
             pendingRemoteState = state;
 
             const elapsedSeconds = state.isPlaying ? (Date.now() - state.lastUpdated) / 1000 : 0;
@@ -734,13 +744,12 @@
             const player = getActivePlayer();
             if (!player) {
                 loadVideoSource(state.url, state.type, false);
-                setTimeout(() => { isApplyingRemoteState = false; }, 600);
                 return;
             }
 
             try {
                 const localTime = player.getCurrentTime();
-                if (Math.abs(localTime - targetTime) > 1.2) {
+                if (Math.abs(localTime - targetTime) > 1.0) {
                     player.seekTo(targetTime, true);
                 }
 
@@ -755,8 +764,6 @@
 
             currentRoom.videoState = state;
             updatePlayIcon(state.isPlaying);
-            
-            setTimeout(() => { isApplyingRemoteState = false; }, 600);
         }
 
         function executeUnmuteAndPlay() {
@@ -945,7 +952,6 @@
                                 'autoplay': 1, 
                                 'enablejsapi': 1,
                                 'playsinline': 1,
-                                'origin': window.location.origin,
                                 'start': Math.floor(startSec),
                                 'mute': 1
                             },
@@ -962,16 +968,16 @@
                                     startProgressTicker();
                                 },
                                 'onStateChange': (event) => {
-                                    if (isApplyingRemoteState) return;
-
+                                    if (isLocalAction) return;
+                                    
                                     // 1 = PLAYING, 2 = PAUSED
                                     if (event.data === YT.PlayerState.PLAYING) {
+                                        triggerLocalLock();
                                         currentRoom.videoState.isPlaying = true;
-                                        updatePlayIcon(true);
                                         publishRoomState();
                                     } else if (event.data === YT.PlayerState.PAUSED) {
+                                        triggerLocalLock();
                                         currentRoom.videoState.isPlaying = false;
-                                        updatePlayIcon(false);
                                         publishRoomState();
                                     }
                                 }
@@ -984,6 +990,7 @@
             }
 
             if (shouldPublish) {
+                triggerLocalLock();
                 publishRoomState();
             }
         }
@@ -1013,16 +1020,17 @@
             const player = getActivePlayer();
             if (!player) return;
 
+            triggerLocalLock();
+
             if (currentRoom.videoState.isPlaying) {
                 player.pause();
                 currentRoom.videoState.isPlaying = false;
-                updatePlayIcon(false);
             } else {
                 player.play();
                 currentRoom.videoState.isPlaying = true;
-                updatePlayIcon(true);
             }
 
+            updatePlayIcon(currentRoom.videoState.isPlaying);
             publishRoomState();
         }
 
@@ -1056,6 +1064,7 @@
                 if (!player) return;
                 const duration = player.getDuration();
                 if (duration > 0) {
+                    triggerLocalLock();
                     const seekTime = (e.target.value / 100) * duration;
                     player.seekTo(seekTime, true);
                     currentRoom.videoState.currentTime = seekTime;
@@ -1071,6 +1080,7 @@
         }
 
         function syncHostTime() {
+            triggerLocalLock();
             publishRoomState();
             addSystemChatMessage('Resynced to host time.');
         }
@@ -1176,7 +1186,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully with origin-secured iframe binding.");
+        console.log("Firebase initialized successfully with local action debounce locks.");
     </script>
 </body>
 </html>
