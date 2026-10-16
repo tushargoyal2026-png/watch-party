@@ -464,10 +464,16 @@
         let unsubscribePresenceListener = null;
         let unsubscribeSignalListener = null;
 
-        // WebRTC variables
+        // Enhanced WebRTC configuration with multiple redundant public STUN servers
         let peerConnection = null;
         let localStream = null;
-        const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+        const rtcConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' }
+            ]
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
@@ -624,7 +630,7 @@
             if (unsubscribePresenceListener) unsubscribePresenceListener();
             if (unsubscribeSignalListener) unsubscribeSignalListener();
 
-            // 1. Room Sync Listener with Precise Timestamp Calculation & Ready Retry
+            // 1. Room Sync Listener with Precise Timestamp Calculation
             unsubscribeRoomListener = window.firebaseOnSnapshot(window.firebaseDoc(window.db, "rooms", code), (docSnap) => {
                 if (!docSnap.exists()) return;
                 const data = docSnap.data();
@@ -646,13 +652,13 @@
                 });
             });
 
-            // 3. WebRTC Signaling Listener
+            // 3. WebRTC Signaling Listener for Screen/Tab Share
             const signalsRef = window.firebaseCollection(window.db, "rooms", code, "signals");
             unsubscribeSignalListener = window.firebaseOnSnapshot(signalsRef, async (snapshot) => {
                 snapshot.docChanges().forEach(async (change) => {
                     if (change.type === "added") {
                         const data = change.doc.data();
-                        if (data.target === currentUser.id) {
+                        if (data.target === currentUser.id || data.target === 'broadcast') {
                             await handleSignalingData(data);
                         }
                     }
@@ -717,7 +723,6 @@
 
             const player = getActivePlayer();
             if (!player) {
-                // Retry if player is still buffering or loading on new join
                 setTimeout(() => applyRemoteVideoState(state), 800);
                 return;
             }
@@ -738,7 +743,7 @@
             setTimeout(() => { isInternalStateChange = false; }, 500);
         }
 
-        // ================= WebRTC Screen Share & Audio Signaling ================= //
+        // ================= Robust WebRTC Screen & Audio Sync ================= //
         async function startScreenShare() {
             try {
                 localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
@@ -756,7 +761,7 @@
                 localStream.getTracks()[0].onended = () => stopScreenShare();
             } catch (err) {
                 console.error("Error sharing screen:", err);
-                alert("Could not start screen share. Make sure to select a tab and check 'Share tab audio'.");
+                alert("Could not start screen share. Make sure to choose a tab and verify 'Share tab audio' is checked.");
             }
         }
 
@@ -775,6 +780,9 @@
         }
 
         function setupPeerConnection() {
+            if (peerConnection) {
+                peerConnection.close();
+            }
             peerConnection = new RTCPeerConnection(rtcConfig);
 
             if (localStream) {
@@ -801,7 +809,7 @@
                     sender: currentUser.id,
                     target: 'broadcast'
                 });
-            });
+            }).catch(err => console.error("WebRTC Offer Error:", err));
         }
 
         async function handleSignalingData(data) {
@@ -819,12 +827,12 @@
                     document.getElementById('ytPlayerContainer').classList.add('hidden');
 
                     screenVideo.play().catch(err => {
-                        console.log("Auto-play prevented, muting audio for initial play:", err);
+                        console.log("Autoplay blocked, auto-muting fallback:", err);
                         screenVideo.muted = true;
                         screenVideo.play();
                     });
 
-                    addSystemChatMessage('Connected to live screen share stream!');
+                    addSystemChatMessage('Connected to live screen stream successfully!');
                 };
 
                 peerConnection.onicecandidate = (event) => {
@@ -839,25 +847,29 @@
                 };
             }
 
-            if (data.type === 'offer') {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(data.sdp)));
-                const answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
+            try {
+                if (data.type === 'offer') {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(data.sdp)));
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
 
-                window.firebaseAddDoc(window.firebaseCollection(window.db, "rooms", currentRoom.code, "signals"), {
-                    type: 'answer',
-                    sdp: JSON.stringify(peerConnection.localDescription),
-                    sender: currentUser.id,
-                    target: data.sender
-                });
-            } else if (data.type === 'answer') {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(data.sdp)));
-            } else if (data.type === 'candidate') {
-                try {
-                    await peerConnection.addIceCandidate(new RTCIceCandidate(JSON.parse(data.candidate)));
-                } catch (e) {
-                    console.error("Error adding received ICE candidate:", e);
+                    window.firebaseAddDoc(window.firebaseCollection(window.db, "rooms", currentRoom.code, "signals"), {
+                        type: 'answer',
+                        sdp: JSON.stringify(peerConnection.localDescription),
+                        sender: currentUser.id,
+                        target: data.sender
+                    });
+                } else if (data.type === 'answer') {
+                    if (peerConnection.signalingState !== "stable") {
+                        await peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(data.sdp)));
+                    }
+                } else if (data.type === 'candidate') {
+                    if (peerConnection.remoteDescription) {
+                        await peerConnection.addIceCandidate(new RTCIceCandidate(JSON.parse(data.candidate)));
+                    }
                 }
+            } catch (e) {
+                console.error("Signaling handler error:", e);
             }
         }
 
@@ -1063,7 +1075,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully (v11 Modular with WebRTC Fixes & Timestamp Sync).");
+        console.log("Firebase initialized successfully (v11 Modular with Robust WebRTC & Timestamp Sync).");
     </script>
 </body>
 </html>
