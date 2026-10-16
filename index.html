@@ -467,7 +467,7 @@
         let ytPlayer = null;
         let pendingYtUrl = '';
         let pendingRemoteState = null;
-        let isLocalAction = false; // Prevents recursive loops
+        let isLocalAction = false; 
         let localActionTimeout = null;
         let unsubscribeRoomListener = null;
         let unsubscribeChatListener = null;
@@ -646,7 +646,6 @@
                 if (!docSnap.exists()) return;
                 const data = docSnap.data();
 
-                // Only apply if the update came from another user (not locked by local action)
                 if (data.videoState && !isLocalAction) {
                     applyRemoteVideoState(data.videoState);
                 }
@@ -725,13 +724,12 @@
             }
         }
 
-        // Lock local mutations for 1 second to prevent bounce-back loops
         function triggerLocalLock() {
             isLocalAction = true;
             if (localActionTimeout) clearTimeout(localActionTimeout);
             localActionTimeout = setTimeout(() => {
                 isLocalAction = false;
-            }, 1000);
+            }, 1200);
         }
 
         function applyRemoteVideoState(state) {
@@ -749,7 +747,7 @@
 
             try {
                 const localTime = player.getCurrentTime();
-                if (Math.abs(localTime - targetTime) > 1.0) {
+                if (Math.abs(localTime - targetTime) > 1.2) {
                     player.seekTo(targetTime, true);
                 }
 
@@ -968,17 +966,21 @@
                                     startProgressTicker();
                                 },
                                 'onStateChange': (event) => {
-                                    if (isLocalAction) return;
-                                    
                                     // 1 = PLAYING, 2 = PAUSED
                                     if (event.data === YT.PlayerState.PLAYING) {
-                                        triggerLocalLock();
+                                        updatePlayIcon(true);
                                         currentRoom.videoState.isPlaying = true;
-                                        publishRoomState();
+                                        if (!isLocalAction) {
+                                            triggerLocalLock();
+                                            publishRoomState();
+                                        }
                                     } else if (event.data === YT.PlayerState.PAUSED) {
-                                        triggerLocalLock();
+                                        updatePlayIcon(false);
                                         currentRoom.videoState.isPlaying = false;
-                                        publishRoomState();
+                                        if (!isLocalAction) {
+                                            triggerLocalLock();
+                                            publishRoomState();
+                                        }
                                     }
                                 }
                             }
@@ -1025,12 +1027,13 @@
             if (currentRoom.videoState.isPlaying) {
                 player.pause();
                 currentRoom.videoState.isPlaying = false;
+                updatePlayIcon(false);
             } else {
                 player.play();
                 currentRoom.videoState.isPlaying = true;
+                updatePlayIcon(true);
             }
 
-            updatePlayIcon(currentRoom.videoState.isPlaying);
             publishRoomState();
         }
 
@@ -1186,7 +1189,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully with local action debounce locks.");
+        console.log("Firebase initialized successfully with full bidirectional play/pause sync.");
     </script>
 </body>
 </html>
