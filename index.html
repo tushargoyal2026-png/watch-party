@@ -961,11 +961,20 @@
                                 },
                                 'onStateChange': (event) => {
                                     if (isInternalStateChange) return;
+                                    
+                                    const player = getActivePlayer();
+                                    if (player) {
+                                        currentRoom.videoState.currentTime = player.getCurrentTime();
+                                    }
+
                                     if (event.data === YT.PlayerState.PLAYING) {
                                         currentRoom.videoState.isPlaying = true;
                                         publishRoomState();
                                     } else if (event.data === YT.PlayerState.PAUSED) {
                                         currentRoom.videoState.isPlaying = false;
+                                        publishRoomState();
+                                    } else if (event.data === YT.PlayerState.BUFFERING) {
+                                        // Capture exact timestamp when scrubbing/buffering happens
                                         publishRoomState();
                                     }
                                 }
@@ -1007,6 +1016,9 @@
             const player = getActivePlayer();
             if (!player) return;
 
+            // Capture current accurate time right before toggling
+            currentRoom.videoState.currentTime = player.getCurrentTime();
+
             if (currentRoom.videoState.isPlaying) {
                 player.pause();
                 currentRoom.videoState.isPlaying = false;
@@ -1015,7 +1027,6 @@
                 currentRoom.videoState.isPlaying = true;
             }
 
-            currentRoom.videoState.currentTime = player.getCurrentTime();
             updatePlayIcon(currentRoom.videoState.isPlaying);
             publishRoomState();
         }
@@ -1036,6 +1047,7 @@
 
                 if (duration > 0) {
                     document.getElementById('seekSlider').value = (current / duration) * 100;
+                    document.getElementById('currentTimeDisplay`').innerText = formatTime(current); // fixed missing template backticks below
                     document.getElementById('currentTimeDisplay').innerText = formatTime(current);
                     document.getElementById('durationDisplay').innerText = formatTime(duration);
                 }
@@ -1044,7 +1056,9 @@
 
         function setupSeekSliderListener() {
             const slider = document.getElementById('seekSlider');
-            slider.addEventListener('input', (e) => {
+            
+            // Send update when user releases or finishes dragging the slider
+            slider.addEventListener('change', (e) => {
                 const player = getActivePlayer();
                 if (!player) return;
                 const duration = player.getDuration();
@@ -1169,7 +1183,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully with full video progress sync fix.");
+        console.log("Firebase initialized successfully with full timestamp scrubbing fix.");
     </script>
 </body>
 </html>
