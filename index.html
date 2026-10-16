@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Watch Party - Synchronized Cinema & Discovery</title>
+    <title>Watch Party - Synchronized Cinema</title>
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,27 +12,25 @@
             theme: {
                 extend: {
                     colors: {
-                        brand: {
-                            50: '#f0f6ff',
-                            100: '#e0edff',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            700: '#1d4ed8',
-                            900: '#0f172a'
+                        party: {
+                            emerald: '#10b981',
+                            violet: '#8b5cf6',
+                            dark: '#090d16',
+                            card: '#0f172a'
                         }
                     },
                     animation: {
-                        'pulse-glow': 'pulseGlow 4s ease-in-out infinite alternate',
+                        'pulse-glow': 'pulseGlow 5s ease-in-out infinite alternate',
                         'float': 'float 6s ease-in-out infinite',
                     },
                     keyframes: {
                         pulseGlow: {
-                            '0%': { opacity: '0.4', transform: 'scale(1)' },
-                            '100%': { opacity: '0.8', transform: 'scale(1.1)' }
+                            '0%': { opacity: '0.3', transform: 'scale(1)' },
+                            '100%': { opacity: '0.6', transform: 'scale(1.15)' }
                         },
                         float: {
                             '0%, 100%': { transform: 'translateY(0px)' },
-                            '50%': { transform: 'translateY(-10px)' }
+                            '50%': { transform: 'translateY(-12px)' }
                         }
                     }
                 }
@@ -44,96 +42,96 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        /* Animated Gradient Background */
+        /* Immersive Emerald & Violet Ambient Background */
         body {
-            background: radial-gradient(circle at 15% 15%, rgba(37, 99, 235, 0.15), transparent 40%),
-                        radial-gradient(circle at 85% 85%, rgba(147, 51, 234, 0.15), transparent 40%),
-                        #030712;
+            background: radial-gradient(circle at 10% 10%, rgba(16, 185, 129, 0.12), transparent 45%),
+                        radial-gradient(circle at 90% 90%, rgba(139, 92, 246, 0.15), transparent 45%),
+                        #070a12;
             background-attachment: fixed;
         }
 
-        /* Glassmorphism utility */
         .glass-panel {
             background: rgba(15, 23, 42, 0.65);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
         }
 
         .glass-panel-glow {
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(59, 130, 246, 0.25);
-            box-shadow: 0 0 30px rgba(37, 99, 235, 0.15);
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            box-shadow: 0 0 40px rgba(139, 92, 246, 0.2);
         }
 
-        .chat-scroll::-webkit-scrollbar { width: 5px; }
+        .chat-scroll::-webkit-scrollbar { width: 6px; }
         .chat-scroll::-webkit-scrollbar-track { background: transparent; }
-        .chat-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 10px; }
-        .chat-scroll::-webkit-scrollbar-thumb:hover { background: rgba(59, 130, 246, 0.5); }
+        .chat-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 12px; }
+        .chat-scroll::-webkit-scrollbar-thumb:hover { background: rgba(16, 185, 129, 0.5); }
 
         .emoji-float {
             position: absolute;
-            animation: floatUp 2.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            animation: floatUp 2.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
             pointer-events: none;
             z-index: 50;
         }
         @keyframes floatUp {
             0% { opacity: 1; transform: translateY(0) scale(0.8) rotate(0deg); }
-            50% { transform: translateY(-100px) scale(1.3) rotate(10deg); }
-            100% { opacity: 0; transform: translateY(-200px) scale(1.6) rotate(-10deg); }
+            50% { transform: translateY(-120px) scale(1.4) rotate(12deg); }
+            100% { opacity: 0; transform: translateY(-240px) scale(1.7) rotate(-12deg); }
         }
     </style>
 </head>
-<body class="text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-blue-600 selection:text-white relative overflow-x-hidden">
+<body class="text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-emerald-500 selection:text-slate-950 relative overflow-x-hidden">
 
     <!-- Ambient Glowing Orbs -->
-    <div class="fixed top-1/4 -left-32 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none animate-pulse-glow"></div>
-    <div class="fixed bottom-1/4 -right-32 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl pointer-events-none animate-pulse-glow" style="animation-delay: 2s;"></div>
+    <div class="fixed top-1/4 -left-32 w-[450px] h-[450px] bg-emerald-500/15 rounded-full blur-[120px] pointer-events-none animate-pulse-glow"></div>
+    <div class="fixed bottom-1/4 -right-32 w-[450px] h-[450px] bg-violet-600/15 rounded-full blur-[120px] pointer-events-none animate-pulse-glow" style="animation-delay: 2.5s;"></div>
 
     <!-- ================= WELCOME & ONBOARDING VIEW ================= -->
-    <div id="welcomeView" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-        <div class="max-w-md w-full glass-panel-glow rounded-3xl p-8 shadow-2xl relative overflow-hidden flex flex-col gap-6 animate-float">
-            <div class="absolute -top-12 -right-12 w-32 h-32 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full blur-2xl opacity-50"></div>
+    <div id="welcomeView" class="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-950/85 backdrop-blur-lg">
+        <div class="max-w-md w-full glass-panel-glow rounded-[32px] p-8 sm:p-10 shadow-2xl relative overflow-hidden flex flex-col gap-6 animate-float">
+            <div class="absolute -top-16 -right-16 w-40 h-40 bg-gradient-to-br from-emerald-500 to-violet-600 rounded-full blur-3xl opacity-40"></div>
             
             <div class="flex items-center gap-4">
-                <div class="p-3.5 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-2xl shadow-lg shadow-blue-500/40 transform hover:scale-105 transition duration-300">
+                <div class="p-4 bg-gradient-to-tr from-emerald-500 to-violet-600 rounded-2xl shadow-xl shadow-emerald-500/30 transform hover:scale-105 transition duration-300">
                     <i data-lucide="tv" class="w-8 h-8 text-white"></i>
                 </div>
                 <div>
                     <h1 class="text-2xl font-black tracking-tight text-white flex items-center gap-2">
                         WatchParty
-                        <span class="text-[10px] bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Live</span>
+                        <span class="text-[10px] bg-gradient-to-r from-emerald-400 to-violet-400 text-slate-950 px-2.5 py-0.5 rounded-full font-extrabold uppercase tracking-widest shadow">Sync</span>
                     </h1>
-                    <p class="text-xs text-slate-400">Stream & vibe together in perfect sync</p>
+                    <p class="text-xs text-slate-400">Cinematic viewing experience with friends</p>
                 </div>
             </div>
 
-            <div class="space-y-4">
+            <div class="space-y-5">
                 <!-- Username Input -->
-                <div class="space-y-1.5">
-                    <label class="text-[11px] font-bold text-blue-400 uppercase tracking-wider">Your Display Name</label>
-                    <input type="text" id="onboardUsernameInput" placeholder="Enter your name..." class="w-full bg-slate-950/80 border border-slate-700/80 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition duration-300 font-medium">
+                <div class="space-y-2">
+                    <label class="text-[11px] font-bold text-emerald-400 uppercase tracking-widest">Your Display Name</label>
+                    <input type="text" id="onboardUsernameInput" placeholder="Enter your name..." class="w-full bg-slate-950/90 border border-slate-700/80 rounded-2xl px-5 py-3.5 text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/15 transition duration-300 font-medium">
                 </div>
 
                 <!-- Action Tabs / Choices -->
-                <div class="grid grid-cols-2 gap-3 pt-2">
-                    <button onclick="handleOnboardCreateRoom()" class="p-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 shadow-lg shadow-blue-600/30 hover:shadow-blue-500/50 hover:-translate-y-0.5 active:translate-y-0 group">
+                <div class="grid grid-cols-2 gap-3.5 pt-1">
+                    <button onclick="handleOnboardCreateRoom()" class="p-4.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:translate-y-0 group">
                         <i data-lucide="plus-circle" class="w-6 h-6 group-hover:scale-110 transition duration-300"></i>
-                        <span class="text-xs font-bold tracking-wide">Create Room</span>
+                        <span class="text-xs tracking-wide">Create Room</span>
                     </button>
 
-                    <button onclick="toggleJoinPanel()" class="p-4 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 text-white rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 group">
-                        <i data-lucide="log-in" class="w-6 h-6 text-blue-400 group-hover:scale-110 transition duration-300"></i>
+                    <button onclick="toggleJoinPanel()" class="p-4.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-white rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 group">
+                        <i data-lucide="log-in" class="w-6 h-6 text-violet-400 group-hover:scale-110 transition duration-300"></i>
                         <span class="text-xs font-bold tracking-wide">Join Room</span>
                     </button>
                 </div>
 
                 <!-- Hidden Join Room Code Input Container -->
-                <div id="joinCodeContainer" class="hidden space-y-3 pt-3 border-t border-slate-800/80 transition-all duration-300">
-                    <input type="text" id="onboardRoomCodeInput" placeholder="ENTER 6-CHAR CODE" class="w-full bg-slate-950/90 border border-slate-700/80 rounded-2xl px-4 py-3 text-sm text-white uppercase font-mono tracking-widest text-center focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition duration-300">
-                    <button onclick="handleOnboardJoinRoom()" class="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-2xl transition-all duration-300 shadow-lg shadow-emerald-600/30 hover:shadow-emerald-500/50 hover:-translate-y-0.5">
+                <div id="joinCodeContainer" class="hidden space-y-3.5 pt-3.5 border-t border-slate-800/80 transition-all duration-300">
+                    <input type="text" id="onboardRoomCodeInput" placeholder="ENTER 6-CHAR CODE" class="w-full bg-slate-950/90 border border-slate-700/80 rounded-2xl px-5 py-3.5 text-sm text-white uppercase font-mono tracking-widest text-center focus:outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/15 transition duration-300">
+                    <button onclick="handleOnboardJoinRoom()" class="w-full py-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs rounded-2xl transition-all duration-300 shadow-lg shadow-violet-600/30 hover:shadow-violet-500/50 hover:-translate-y-0.5">
                         Connect & Watch Together
                     </button>
                 </div>
@@ -145,49 +143,49 @@
     <div id="mainAppView" class="hidden flex-1 flex flex-col min-h-screen relative z-10">
         <!-- Header Navigation -->
         <header class="border-b border-slate-800/80 glass-panel sticky top-0 z-40">
-            <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="p-2 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl shadow-lg shadow-blue-500/30">
+            <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3.5">
+                    <div class="p-2.5 bg-gradient-to-tr from-emerald-500 to-violet-600 rounded-xl shadow-lg shadow-emerald-500/25">
                         <i data-lucide="tv" class="w-6 h-6 text-white"></i>
                     </div>
                     <div>
-                        <h1 class="text-xl font-black tracking-tight text-white flex items-center gap-2">
+                        <h1 class="text-xl font-black tracking-tight text-white flex items-center gap-2.5">
                             WatchParty
-                            <span class="text-[10px] bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2.5 py-0.5 rounded-full font-bold">In Sync</span>
+                            <span class="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold">Synced Live</span>
                         </h1>
                     </div>
                 </div>
 
                 <!-- Global Action Header / Room Status -->
-                <div id="roomNavInfo" class="flex items-center gap-4 bg-slate-900/90 border border-slate-700/80 rounded-full px-4 py-1.5 shadow-inner">
+                <div id="roomNavInfo" class="flex items-center gap-5 bg-slate-900/90 border border-slate-700/80 rounded-full px-5 py-2 shadow-inner">
                     <div class="flex items-center gap-2">
                         <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span id="navRoomCode" class="font-mono text-sm font-bold text-white tracking-wider">------</span>
+                        <span id="navRoomCode" class="font-mono text-sm font-bold text-white tracking-widest">------</span>
                     </div>
-                    <button onclick="copyInviteLink()" class="hover:text-blue-400 text-slate-400 transition flex items-center gap-1.5 text-xs font-semibold">
+                    <button onclick="copyInviteLink()" class="hover:text-emerald-400 text-slate-400 transition flex items-center gap-1.5 text-xs font-semibold">
                         <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Link
                     </button>
                     <div class="h-4 w-px bg-slate-800"></div>
                     <div class="flex items-center gap-1.5 text-xs text-slate-300 font-medium">
-                        <i data-lucide="users" class="w-3.5 h-3.5 text-blue-400"></i>
+                        <i data-lucide="users" class="w-3.5 h-3.5 text-violet-400"></i>
                         <span id="participantCount" class="font-bold text-white">1</span> Viewers
                     </div>
                 </div>
 
-                <button onclick="openRoomModal()" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold transition-all duration-300 shadow-md shadow-blue-600/30 hover:shadow-blue-500/40 flex items-center gap-2 hover:-translate-y-0.5">
-                    <i data-lucide="plus-circle" class="w-4 h-4"></i> Room Management
+                <button onclick="openRoomModal()" class="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 rounded-xl text-xs font-bold transition-all duration-300 shadow-md shadow-emerald-500/25 hover:shadow-emerald-500/40 flex items-center gap-2 hover:-translate-y-0.5">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> Room Hub
                 </button>
             </div>
         </header>
 
         <!-- Main Container -->
-        <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
 
             <!-- Left Column: Synchronized Video Player (8 cols) -->
             <div class="lg:col-span-8 flex flex-col gap-6">
                 
                 <!-- Video Player Section -->
-                <div class="relative glass-panel rounded-3xl overflow-hidden shadow-2xl border border-slate-800/80 group">
+                <div class="relative glass-panel rounded-[28px] overflow-hidden shadow-2xl border border-slate-800/90 group">
                     
                     <div id="emojiOverlay" class="absolute inset-0 pointer-events-none overflow-hidden z-30"></div>
 
@@ -205,16 +203,16 @@
                         </div>
 
                         <!-- Placeholder -->
-                        <div id="playerPlaceholder" class="flex flex-col items-center justify-center p-8 text-center">
-                            <div class="w-20 h-20 bg-slate-800/80 border border-slate-700/60 rounded-3xl flex items-center justify-center mb-5 text-blue-400 shadow-xl animate-float">
+                        <div id="playerPlaceholder" class="flex flex-col items-center justify-center p-10 text-center">
+                            <div class="w-20 h-20 bg-slate-900 border border-slate-800 rounded-3xl flex items-center justify-center mb-5 text-emerald-400 shadow-2xl animate-float">
                                 <i data-lucide="film" class="w-10 h-10"></i>
                             </div>
                             <h3 class="text-xl font-bold text-white mb-2">No Video Loaded Yet</h3>
-                            <p class="text-xs text-slate-400 max-w-md mb-6 leading-relaxed">Paste any YouTube video link, MP4 stream URL, or upload a local video file from your device below to watch together in real time.</p>
+                            <p class="text-xs sm:text-sm text-slate-400 max-w-md mb-6 leading-relaxed">Paste any YouTube video link, MP4 stream URL, or upload a local video file from your device below to watch together in real time.</p>
                             
                             <div class="flex flex-wrap items-center justify-center gap-3">
-                                <label class="cursor-pointer px-5 py-2.5 bg-slate-800/90 hover:bg-slate-700/90 text-white rounded-xl text-xs font-semibold border border-slate-700/80 flex items-center gap-2 transition-all duration-300 shadow-lg hover:-translate-y-0.5">
-                                    <i data-lucide="upload" class="w-4 h-4 text-blue-400"></i>
+                                <label class="cursor-pointer px-5.5 py-3 bg-slate-900/90 hover:bg-slate-800 text-white rounded-xl text-xs font-bold border border-slate-700/80 flex items-center gap-2.5 transition-all duration-300 shadow-xl hover:-translate-y-0.5">
+                                    <i data-lucide="upload" class="w-4 h-4 text-emerald-400"></i>
                                     Upload Local Video File
                                     <input type="file" id="localFileInput" accept="video/mp4,video/webm,video/ogg,video/mkv" class="hidden" onchange="handleLocalFileUpload(event)">
                                 </label>
@@ -223,25 +221,25 @@
                     </div>
 
                     <!-- Custom Overlay Controls Bar -->
-                    <div class="p-4 bg-slate-950/90 border-t border-slate-800/80 flex flex-col gap-3">
-                        <div class="flex items-center gap-3">
+                    <div class="p-5 bg-slate-950/95 border-t border-slate-800/80 flex flex-col gap-3.5">
+                        <div class="flex items-center gap-4">
                             <span id="currentTimeDisplay" class="font-mono text-xs text-slate-400 min-w-[45px]">00:00</span>
-                            <input type="range" id="seekSlider" min="0" max="100" value="0" step="0.1" class="w-full accent-blue-500 bg-slate-800 h-2 rounded-lg appearance-none cursor-pointer">
+                            <input type="range" id="seekSlider" min="0" max="100" value="0" step="0.1" class="w-full accent-emerald-500 bg-slate-800 h-2 rounded-lg appearance-none cursor-pointer">
                             <span id="durationDisplay" class="font-mono text-xs text-slate-400 min-w-[45px]">00:00</span>
                         </div>
 
-                        <div class="flex items-center justify-between flex-wrap gap-3">
-                            <div class="flex items-center gap-2">
-                                <button id="playPauseBtn" onclick="togglePlay()" class="p-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl transition duration-300 shadow-md shadow-blue-600/30 hover:scale-105 active:scale-95">
+                        <div class="flex items-center justify-between flex-wrap gap-4">
+                            <div class="flex items-center gap-3">
+                                <button id="playPauseBtn" onclick="togglePlay()" class="p-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 rounded-2xl transition duration-300 shadow-lg shadow-emerald-500/25 hover:scale-105 active:scale-95">
                                     <i data-lucide="play" id="playIcon" class="w-5 h-5 fill-current"></i>
                                 </button>
 
-                                <button onclick="syncHostTime()" class="p-2.5 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-2xl transition border border-slate-800" title="Resync to Host">
+                                <button onclick="syncHostTime()" class="p-3 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-2xl transition border border-slate-800" title="Resync to Host">
                                     <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
                                 </button>
 
                                 <!-- Emoji Reactions Bar -->
-                                <div class="flex items-center gap-1 bg-slate-900/90 p-1 rounded-2xl border border-slate-800">
+                                <div class="flex items-center gap-1.5 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
                                     <button onclick="sendEmoji('❤️')" class="px-2.5 py-1 hover:bg-slate-800 rounded-xl text-base transition-all duration-300 hover:scale-125 active:scale-95">❤️</button>
                                     <button onclick="sendEmoji('🔥')" class="px-2.5 py-1 hover:bg-slate-800 rounded-xl text-base transition-all duration-300 hover:scale-125 active:scale-95">🔥</button>
                                     <button onclick="sendEmoji('😂')" class="px-2.5 py-1 hover:bg-slate-800 rounded-xl text-base transition-all duration-300 hover:scale-125 active:scale-95">😂</button>
@@ -250,9 +248,9 @@
                             </div>
 
                             <!-- Video Input -->
-                            <div class="flex items-center gap-2 flex-1 max-w-md ml-auto">
-                                <input type="text" id="videoUrlInput" placeholder="Paste YouTube link or MP4 URL..." class="w-full bg-slate-900/90 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 transition duration-300">
-                                <button onclick="loadVideoFromInput()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-white rounded-xl transition duration-300 whitespace-nowrap shadow-md">Load</button>
+                            <div class="flex items-center gap-2.5 flex-1 max-w-md ml-auto">
+                                <input type="text" id="videoUrlInput" placeholder="Paste YouTube link or MP4 URL..." class="w-full bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 transition duration-300">
+                                <button onclick="loadVideoFromInput()" class="px-4.5 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-white rounded-xl transition duration-300 whitespace-nowrap shadow-md">Load</button>
                             </div>
                         </div>
                     </div>
@@ -264,40 +262,40 @@
             <div class="lg:col-span-4 flex flex-col gap-6">
                 
                 <!-- Tab Switcher -->
-                <div class="glass-panel rounded-2xl p-1.5 flex gap-1 border border-slate-800/80">
-                    <button onclick="switchTab('chat')" id="tabBtnChat" class="flex-1 py-2.5 px-3 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white transition duration-300 flex items-center justify-center gap-2 shadow-md shadow-blue-600/20">
+                <div class="glass-panel rounded-2xl p-1.5 flex gap-1.5 border border-slate-800/80">
+                    <button onclick="switchTab('chat')" id="tabBtnChat" class="flex-1 py-3 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 transition duration-300 flex items-center justify-center gap-2 shadow-md shadow-emerald-500/25">
                         <i data-lucide="message-square" class="w-4 h-4"></i> Live Chat
                     </button>
-                    <button onclick="switchTab('participants')" id="tabBtnParticipants" class="flex-1 py-2.5 px-3 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition duration-300 flex items-center justify-center gap-2">
+                    <button onclick="switchTab('participants')" id="tabBtnParticipants" class="flex-1 py-3 px-4 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition duration-300 flex items-center justify-center gap-2">
                         <i data-lucide="users" class="w-4 h-4"></i> Viewers (<span id="tabParticipantCount">1</span>)
                     </button>
                 </div>
 
                 <!-- Tab 1: Live Chat -->
-                <div id="tabContentChat" class="glass-panel rounded-3xl p-4 flex flex-col h-[540px] border border-slate-800/80">
-                    <div class="pb-3 border-b border-slate-800/80 flex items-center justify-between">
+                <div id="tabContentChat" class="glass-panel rounded-[28px] p-5 flex flex-col h-[560px] border border-slate-800/80">
+                    <div class="pb-3.5 border-b border-slate-800/80 flex items-center justify-between">
                         <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
                             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Room Chat
                         </span>
-                        <span id="userBadge" class="text-[11px] bg-blue-500/10 border border-blue-500/30 px-2.5 py-0.5 rounded-full text-blue-400 font-mono font-bold">You</span>
+                        <span id="userBadge" class="text-[11px] bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full text-emerald-400 font-mono font-bold">You</span>
                     </div>
 
-                    <div id="chatMessages" class="flex-1 overflow-y-auto my-3 pr-1 space-y-3 chat-scroll"></div>
+                    <div id="chatMessages" class="flex-1 overflow-y-auto my-3.5 pr-1 space-y-3 chat-scroll"></div>
 
-                    <form onsubmit="sendChatMessage(event)" class="flex gap-2 pt-3 border-t border-slate-800/80">
-                        <input type="text" id="chatInput" placeholder="Type a message..." class="flex-1 bg-slate-900/90 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 transition duration-300">
-                        <button type="submit" class="p-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl transition duration-300 shadow-md shadow-blue-600/30 hover:scale-105 active:scale-95">
+                    <form onsubmit="sendChatMessage(event)" class="flex gap-2.5 pt-3.5 border-t border-slate-800/80">
+                        <input type="text" id="chatInput" placeholder="Type a message..." class="flex-1 bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-emerald-500 transition duration-300">
+                        <button type="submit" class="p-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 rounded-xl transition duration-300 shadow-md shadow-emerald-500/25 hover:scale-105 active:scale-95">
                             <i data-lucide="send" class="w-4 h-4"></i>
                         </button>
                     </form>
                 </div>
 
                 <!-- Tab 2: Participants List -->
-                <div id="tabContentParticipants" class="hidden glass-panel rounded-3xl p-4 flex-col h-[540px] border border-slate-800/80">
-                    <div class="pb-3 border-b border-slate-800/80 flex items-center justify-between">
+                <div id="tabContentParticipants" class="hidden glass-panel rounded-[28px] p-5 flex-col h-[560px] border border-slate-800/80">
+                    <div class="pb-3.5 border-b border-slate-800/80 flex items-center justify-between">
                         <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Connected Viewers</span>
                     </div>
-                    <div id="participantsListContainer" class="flex-1 overflow-y-auto my-3 space-y-2 chat-scroll"></div>
+                    <div id="participantsListContainer" class="flex-1 overflow-y-auto my-3.5 space-y-2.5 chat-scroll"></div>
                 </div>
 
             </div>
@@ -306,26 +304,26 @@
     </div>
 
     <!-- Room Hub Modal -->
-    <div id="roomModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-        <div class="glass-panel-glow rounded-3xl p-6 max-w-md w-full shadow-2xl relative">
-            <button onclick="closeRoomModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition">
+    <div id="roomModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-6 hidden">
+        <div class="glass-panel-glow rounded-[28px] p-8 max-w-md w-full shadow-2xl relative">
+            <button onclick="closeRoomModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white transition">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
 
             <h3 class="text-xl font-bold text-white mb-1">Watch Room Hub</h3>
-            <p class="text-xs text-slate-400 mb-6">Create a new watch room or join a room using a code.</p>
+            <p class="text-xs text-slate-400 mb-6">Create a new watch room or join an existing session code.</p>
 
-            <div class="space-y-4">
-                <div class="p-4 bg-slate-950/80 border border-slate-800 rounded-2xl">
-                    <button onclick="createNewRoom()" class="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl transition shadow-md shadow-blue-600/30 flex items-center justify-center gap-2">
+            <div class="space-y-4.5">
+                <div class="p-4.5 bg-slate-950/80 border border-slate-800 rounded-2xl">
+                    <button onclick="createNewRoom()" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-xs rounded-xl transition shadow-md shadow-emerald-500/25 flex items-center justify-center gap-2">
                         <i data-lucide="plus-circle" class="w-4 h-4"></i> Create New Room
                     </button>
                 </div>
 
-                <div class="p-4 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-3">
-                    <input type="text" id="joinRoomCodeInput" placeholder="ENTER ROOM CODE..." class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white uppercase font-mono tracking-widest text-center focus:outline-none focus:border-blue-500">
-                    <button onclick="joinRoomFromInput()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-2">
-                        <i data-lucide="log-in" class="w-4 h-4 text-blue-400"></i> Join Room
+                <div class="p-4.5 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-3">
+                    <input type="text" id="joinRoomCodeInput" placeholder="ENTER ROOM CODE..." class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white uppercase font-mono tracking-widest text-center focus:outline-none focus:border-violet-500">
+                    <button onclick="joinRoomFromInput()" class="w-full py-3.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-md shadow-violet-600/25">
+                        <i data-lucide="log-in" class="w-4 h-4"></i> Join Room
                     </button>
                 </div>
             </div>
@@ -525,8 +523,8 @@
                     if (Date.now() - user.lastSeen < 20000) {
                         count++;
                         const div = document.createElement('div');
-                        div.className = 'flex items-center justify-between bg-slate-900/90 p-3 rounded-2xl border border-slate-800 text-xs shadow-sm';
-                        div.innerHTML = `<span class="font-bold text-white flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400"></span>${user.name}</span> <span class="text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">Online</span>`;
+                        div.className = 'flex items-center justify-between bg-slate-900/90 p-3.5 rounded-2xl border border-slate-800 text-xs shadow-sm';
+                        div.innerHTML = `<span class="font-bold text-white flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400"></span>${user.name}</span> <span class="text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">Online</span>`;
                         listContainer.appendChild(div);
                     }
                 });
@@ -791,7 +789,7 @@
                     <span class="text-[10px] font-bold text-slate-400">${msg.sender}</span>
                     <span class="text-[9px] text-slate-600">${msg.time}</span>
                 </div>
-                <div class="px-3.5 py-2 rounded-2xl text-xs max-w-[85%] shadow-sm ${isSelf ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-tr-none' : 'bg-slate-900/90 text-slate-200 rounded-tl-none border border-slate-800'}">
+                <div class="px-4 py-2.5 rounded-2xl text-xs max-w-[85%] shadow-md ${isSelf ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-medium rounded-tr-none' : 'bg-slate-900/90 text-slate-200 rounded-tl-none border border-slate-800'}">
                     ${msg.text}
                 </div>
             `;
@@ -816,18 +814,18 @@
             el.style.bottom = '20px';
 
             container.appendChild(el);
-            setTimeout(() => el.remove(), 2200);
+            setTimeout(() => el.remove(), 2400);
         }
 
         function switchTab(tabName) {
             ['chat', 'participants'].forEach(t => {
                 document.getElementById(`tabContent${t.charAt(0).toUpperCase() + t.slice(1)}`).classList.add('hidden');
-                document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`).className = "flex-1 py-2.5 px-3 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition duration-300 flex items-center justify-center gap-2";
+                document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`).className = "flex-1 py-3 px-4 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition duration-300 flex items-center justify-center gap-2";
             });
 
             document.getElementById(`tabContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.remove('hidden');
             document.getElementById(`tabContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('flex');
-            document.getElementById(`tabBtn${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).className = "flex-1 py-2.5 px-3 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white transition duration-300 flex items-center justify-center gap-2 shadow-md shadow-blue-600/20";
+            document.getElementById(`tabBtn${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).className = "flex-1 py-3 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 transition duration-300 flex items-center justify-center gap-2 shadow-md shadow-emerald-500/25";
         }
     </script>
 
@@ -857,7 +855,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully (v11 Modular with Vibrant Theme).");
+        console.log("Firebase initialized successfully (v11 Modular with Emerald/Violet Theme).");
     </script>
 </body>
 </html>
