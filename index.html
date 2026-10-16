@@ -738,8 +738,8 @@
             }
 
             try {
-                // Smooth drift correction (if difference > 2 seconds)
-                if (Math.abs(player.getCurrentTime() - targetTime) > 2.0) {
+                // If time drift is greater than 1.5 seconds, smoothly seek to sync position
+                if (Math.abs(player.getCurrentTime() - targetTime) > 1.5) {
                     player.seekTo(targetTime, true);
                 }
 
@@ -962,19 +962,12 @@
                                 'onStateChange': (event) => {
                                     if (isInternalStateChange) return;
                                     
-                                    const player = getActivePlayer();
-                                    if (player) {
-                                        currentRoom.videoState.currentTime = player.getCurrentTime();
-                                    }
-
+                                    // 1 = PLAYING, 2 = PAUSED
                                     if (event.data === YT.PlayerState.PLAYING) {
                                         currentRoom.videoState.isPlaying = true;
                                         publishRoomState();
                                     } else if (event.data === YT.PlayerState.PAUSED) {
                                         currentRoom.videoState.isPlaying = false;
-                                        publishRoomState();
-                                    } else if (event.data === YT.PlayerState.BUFFERING) {
-                                        // Capture exact timestamp when scrubbing/buffering happens
                                         publishRoomState();
                                     }
                                 }
@@ -1016,9 +1009,6 @@
             const player = getActivePlayer();
             if (!player) return;
 
-            // Capture current accurate time right before toggling
-            currentRoom.videoState.currentTime = player.getCurrentTime();
-
             if (currentRoom.videoState.isPlaying) {
                 player.pause();
                 currentRoom.videoState.isPlaying = false;
@@ -1047,7 +1037,6 @@
 
                 if (duration > 0) {
                     document.getElementById('seekSlider').value = (current / duration) * 100;
-                    document.getElementById('currentTimeDisplay`').innerText = formatTime(current); // fixed missing template backticks below
                     document.getElementById('currentTimeDisplay').innerText = formatTime(current);
                     document.getElementById('durationDisplay').innerText = formatTime(duration);
                 }
@@ -1057,7 +1046,6 @@
         function setupSeekSliderListener() {
             const slider = document.getElementById('seekSlider');
             
-            // Send update when user releases or finishes dragging the slider
             slider.addEventListener('change', (e) => {
                 const player = getActivePlayer();
                 if (!player) return;
@@ -1183,7 +1171,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully with full timestamp scrubbing fix.");
+        console.log("Firebase initialized successfully with full robust player state synchronization.");
     </script>
 </body>
 </html>
