@@ -758,12 +758,13 @@
         }
 
         function executeUnmuteAndPlay() {
-            // Hide the sync prompt banner immediately
+            // Always hide the sync prompt banner immediately
             document.getElementById('syncPromptBanner').classList.add('hidden');
             
             if (ytPlayer && typeof ytPlayer.unMute === 'function') {
                 ytPlayer.unMute();
                 ytPlayer.setVolume(100);
+                ytPlayer.playVideo();
             }
             if (pendingRemoteState) {
                 applyRemoteVideoState(pendingRemoteState);
@@ -1139,7 +1140,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully with banner dismissal fix.");
+        console.log("Firebase initialized successfully with global banner dismissal fix.");
     </script>
 </body>
 </html>
