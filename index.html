@@ -723,7 +723,10 @@
             isInternalStateChange = true;
             pendingRemoteState = state;
 
+            // If a new video URL is present and differs from current state, load it immediately
             if (state.url && state.url !== currentRoom.videoState.url) {
+                currentRoom.videoState.url = state.url;
+                currentRoom.videoState.type = state.type;
                 loadVideoSource(state.url, state.type, false);
             }
 
@@ -740,17 +743,17 @@
             const targetTime = state.currentTime + elapsedSeconds;
 
             if (Math.abs(player.getCurrentTime() - targetTime) > 1.5) {
-                player.seekTo(targetTime);
+                player.seekTo(targetTime, true);
             }
 
             if (state.isPlaying) {
                 try {
-                    player.play();
+                    player.playVideo();
                 } catch (err) {
                     document.getElementById('syncPromptBanner').classList.remove('hidden');
                 }
             } else {
-                player.pause();
+                player.pauseVideo();
             }
 
             currentRoom.videoState = state;
@@ -770,9 +773,9 @@
                 setTimeout(() => {
                     const player = getActivePlayer();
                     if (player) {
-                        const elapsedSeconds = (Date.now() - pendingRemoteState.lastUpdated) / 1000;
-                        player.seekTo(pendingRemoteState.currentTime + elapsedSeconds);
-                        player.play();
+                        const elapsedSeconds = pendingRemoteState.isPlaying ? (Date.now() - pendingRemoteState.lastUpdated) / 1000 : 0;
+                        player.seekTo(pendingRemoteState.currentTime + elapsedSeconds, true);
+                        player.playVideo();
                     }
                 }, 400);
             }
@@ -939,12 +942,16 @@
                             },
                             events: {
                                 'onReady': (event) => {
-                                    // Automatically show sync banner to let user unmute & lock sync
                                     document.getElementById('syncPromptBanner').classList.remove('hidden');
+                                    
+                                    // If a remote state arrived before player was ready, sync it now!
                                     if (pendingRemoteState) {
                                         const elapsedSeconds = pendingRemoteState.isPlaying ? (Date.now() - pendingRemoteState.lastUpdated) / 1000 : 0;
-                                        event.target.seekTo(pendingRemoteState.currentTime + elapsedSeconds);
-                                        event.target.playVideo();
+                                        const targetTime = pendingRemoteState.currentTime + elapsedSeconds;
+                                        event.target.seekTo(targetTime, true);
+                                        if (pendingRemoteState.isPlaying) {
+                                            event.target.playVideo();
+                                        }
                                     }
                                 },
                                 'onStateChange': (event) => {
@@ -1126,7 +1133,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully with foolproof sync prompt banner.");
+        console.log("Firebase initialized successfully with auto-sync video loading fix.");
     </script>
 </body>
 </html>
