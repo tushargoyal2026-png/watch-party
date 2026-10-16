@@ -613,12 +613,14 @@
             const url = document.getElementById('modalYtUrlInput').value.trim();
             if (!url) return;
             closeYouTubeDialog();
-            loadVideoSource(url, 'youtube', true);
+            
             currentRoom.videoState.url = url;
             currentRoom.videoState.type = 'youtube';
             currentRoom.videoState.currentTime = 0;
             currentRoom.videoState.isPlaying = true;
-            publishRoomState();
+            currentRoom.videoState.lastUpdated = Date.now();
+
+            loadVideoSource(url, 'youtube', true);
         }
 
         function toggleFullScreen() {
@@ -718,48 +720,46 @@
             }
         }
 
-        // ================= Bulletproof Autoplay Bypass & Sync Logic ================= //
+        // ================= Bulletproof State Synchronizer ================= //
         function applyRemoteVideoState(state) {
+            if (!state || !state.url) return;
             isInternalStateChange = true;
             pendingRemoteState = state;
 
-            // If a new video URL is present and differs from current state, load it immediately
-            if (state.url && state.url !== currentRoom.videoState.url) {
-                currentRoom.videoState.url = state.url;
-                currentRoom.videoState.type = state.type;
-                loadVideoSource(state.url, state.type, false);
-            }
-
-            const player = getActivePlayer();
-            if (!player) {
-                if (state.url) {
-                    document.getElementById('syncPromptBanner').classList.remove('hidden');
-                }
-                setTimeout(() => applyRemoteVideoState(state), 600);
-                return;
-            }
-
+            // Calculate precise live time accounting for network transmission delay
             const elapsedSeconds = state.isPlaying ? (Date.now() - state.lastUpdated) / 1000 : 0;
             const targetTime = state.currentTime + elapsedSeconds;
 
-            if (Math.abs(player.getCurrentTime() - targetTime) > 1.5) {
-                player.seekTo(targetTime, true);
+            const player = getActivePlayer();
+            if (!player) {
+                // Player hasn't initialized yet; trigger load and show unlock banner
+                loadVideoSource(state.url, state.type, false);
+                document.getElementById('syncPromptBanner').classList.remove('hidden');
+                setTimeout(() => { isInternalStateChange = false; }, 400);
+                return;
             }
 
-            if (state.isPlaying) {
-                try {
-                    player.playVideo();
-                } catch (err) {
-                    document.getElementById('syncPromptBanner').classList.remove('hidden');
+            // Check if active video URL needs updating
+            let currentYtId = extractYtId(state.url);
+            // If the player is ready, check and sync
+            try {
+                if (Math.abs(player.getCurrentTime() - targetTime) > 1.5) {
+                    player.seekTo(targetTime, true);
                 }
-            } else {
-                player.pauseVideo();
+
+                if (state.isPlaying) {
+                    player.playVideo();
+                } else {
+                    player.pauseVideo();
+                }
+            } catch (err) {
+                console.warn("Sync execution warning:", err);
             }
 
             currentRoom.videoState = state;
             updatePlayIcon(state.isPlaying);
             
-            setTimeout(() => { isInternalStateChange = false; }, 500);
+            setTimeout(() => { isInternalStateChange = false; }, 400);
         }
 
         function executeUnmuteAndPlay() {
@@ -768,17 +768,16 @@
                 ytPlayer.unMute();
                 ytPlayer.setVolume(100);
             }
-            if (pendingRemoteState && pendingRemoteState.url) {
-                loadVideoSource(pendingRemoteState.url, pendingRemoteState.type, false);
-                setTimeout(() => {
-                    const player = getActivePlayer();
-                    if (player) {
-                        const elapsedSeconds = pendingRemoteState.isPlaying ? (Date.now() - pendingRemoteState.lastUpdated) / 1000 : 0;
-                        player.seekTo(pendingRemoteState.currentTime + elapsedSeconds, true);
-                        player.playVideo();
-                    }
-                }, 400);
+            if (pendingRemoteState) {
+                applyRemoteVideoState(pendingRemoteState);
             }
+        }
+
+        function extractYtId(url) {
+            if (!url) return '';
+            if (url.includes('v=')) return url.split('v=')[1].split('&')[0];
+            if (url.includes('youtu.be/')) return url.split('youtu.be/')[1].split('?')[0];
+            return url;
         }
 
         // ================= WebRTC Screen & Audio Sync ================= //
@@ -919,15 +918,24 @@
                 activePlayerType = 'yt';
                 ytContainer.classList.remove('hidden');
 
-                let ytId = '';
-                if (url.includes('v=')) ytId = url.split('v=')[1].split('&')[0];
-                else if (url.includes('youtu.be/')) ytId = url.split('youtu.be/')[1].split('?')[0];
+                let ytId = extractYtId(url);
+                let startSec = 0;
+                
+                if (pendingRemoteState) {
+                    const elapsed = pendingRemoteState.isPlaying ? (Date.now() - pendingRemoteState.lastUpdated) / 1000 : 0;
+                    startSec = Math.max(0, pendingRemoteState.currentTime + elapsed);
+                }
 
                 if (window.YT && window.YT.Player) {
                     if (ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
-                        ytPlayer.loadVideoById(ytId);
-                        if (pendingRemoteState) {
-                            setTimeout(() => applyRemoteVideoState(pendingRemoteState), 500);
+                        ytPlayer.loadVideoById({
+                            videoId: ytId,
+                            startSeconds: startSec
+                        });
+                        if (pendingRemoteState && pendingRemoteState.isPlaying) {
+                            ytPlayer.playVideo();
+                        } else if (ytPlayer) {
+                            ytPlayer.pauseVideo();
                         }
                     } else {
                         ytPlayer = new YT.Player('ytPlayer', {
@@ -938,17 +946,16 @@
                                 'autoplay': 1, 
                                 'enablejsapi': 1,
                                 'playsinline': 1,
-                                'mute': 1 // Force start muted to bypass browser block
+                                'start': Math.floor(startSec),
+                                'mute': 1 // Required by modern browsers to allow autoplay
                             },
                             events: {
                                 'onReady': (event) => {
                                     document.getElementById('syncPromptBanner').classList.remove('hidden');
-                                    
-                                    // If a remote state arrived before player was ready, sync it now!
                                     if (pendingRemoteState) {
-                                        const elapsedSeconds = pendingRemoteState.isPlaying ? (Date.now() - pendingRemoteState.lastUpdated) / 1000 : 0;
-                                        const targetTime = pendingRemoteState.currentTime + elapsedSeconds;
-                                        event.target.seekTo(targetTime, true);
+                                        const elapsed = pendingRemoteState.isPlaying ? (Date.now() - pendingRemoteState.lastUpdated) / 1000 : 0;
+                                        const target = pendingRemoteState.currentTime + elapsed;
+                                        event.target.seekTo(target, true);
                                         if (pendingRemoteState.isPlaying) {
                                             event.target.playVideo();
                                         }
@@ -972,7 +979,7 @@
                 }
             }
 
-            if (shouldPublish) {
+            if (shouldPublish && currentUser.isHost) {
                 publishRoomState();
             }
         }
@@ -980,6 +987,8 @@
         function onYouTubeIframeAPIReady() {
             if (pendingYtUrl) {
                 loadVideoSource(pendingYtUrl, 'youtube', false);
+            } else if (pendingRemoteState && pendingRemoteState.url) {
+                loadVideoSource(pendingRemoteState.url, pendingRemoteState.type, false);
             }
         }
 
@@ -1133,7 +1142,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully with auto-sync video loading fix.");
+        console.log("Firebase initialized successfully with absolute join-room timestamp sync fix.");
     </script>
 </body>
 </html>
