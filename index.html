@@ -192,15 +192,15 @@
                     
                     <div id="emojiOverlay" class="absolute inset-0 pointer-events-none overflow-hidden z-30"></div>
 
-                    <!-- Explicit Autoplay Bypass Banner for Joiners -->
-                    <div id="syncPromptBanner" class="hidden absolute inset-0 bg-slate-950/90 z-40 flex flex-col items-center justify-center p-6 text-center">
-                        <div class="w-16 h-16 bg-emerald-500/20 border border-emerald-500/40 rounded-2xl flex items-center justify-center text-emerald-400 mb-4 animate-bounce">
-                            <i data-lucide="play" class="w-8 h-8 fill-current"></i>
+                    <!-- Foolproof Click-To-Sync & Unmute Overlay Banner -->
+                    <div id="syncPromptBanner" class="hidden absolute inset-0 bg-slate-950/95 z-40 flex flex-col items-center justify-center p-6 text-center">
+                        <div class="w-20 h-20 bg-emerald-500/20 border border-emerald-500/40 rounded-3xl flex items-center justify-center text-emerald-400 mb-4 animate-bounce shadow-2xl">
+                            <i data-lucide="volume-2" class="w-10 h-10"></i>
                         </div>
-                        <h3 class="text-xl font-bold text-white mb-2">Room Stream Active!</h3>
-                        <p class="text-xs text-slate-400 max-w-sm mb-6">Click below to bypass browser restrictions and join synchronized playback instantly.</p>
-                        <button onclick="forceSyncAndPlay()" class="px-6 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-bold rounded-xl text-xs shadow-xl shadow-emerald-500/30 transition transform hover:scale-105">
-                            ▶ Join & Play Synchronized Stream
+                        <h3 class="text-xl font-black text-white mb-2 tracking-tight">Sync Stream Audio & Video</h3>
+                        <p class="text-xs sm:text-sm text-slate-300 max-w-md mb-6 leading-relaxed">Browsers block automatic audio. Click below to start playing in sync with the room instantly!</p>
+                        <button onclick="executeUnmuteAndPlay()" class="px-7 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-widest shadow-2xl shadow-emerald-500/40 transition transform hover:scale-105 active:scale-95 flex items-center gap-2.5">
+                            <i data-lucide="play" class="w-4 h-4 fill-current"></i> Join & Play Stream
                         </button>
                     </div>
 
@@ -473,7 +473,6 @@
         let unsubscribePresenceListener = null;
         let unsubscribeSignalListener = null;
 
-        // Enhanced WebRTC configuration with STUN servers
         let peerConnection = null;
         let localStream = null;
         const rtcConfig = {
@@ -639,7 +638,6 @@
             if (unsubscribePresenceListener) unsubscribePresenceListener();
             if (unsubscribeSignalListener) unsubscribeSignalListener();
 
-            // 1. Room Sync Listener
             unsubscribeRoomListener = window.firebaseOnSnapshot(window.firebaseDoc(window.db, "rooms", code), (docSnap) => {
                 if (!docSnap.exists()) return;
                 const data = docSnap.data();
@@ -649,7 +647,6 @@
                 }
             });
 
-            // 2. Chat Messages Listener
             const chatColRef = window.firebaseCollection(window.db, "rooms", code, "messages");
             const chatQuery = window.firebaseQuery(chatColRef, window.firebaseOrderBy("timestamp", "asc"));
             
@@ -661,7 +658,6 @@
                 });
             });
 
-            // 3. WebRTC Signaling Listener
             const signalsRef = window.firebaseCollection(window.db, "rooms", code, "signals");
             unsubscribeSignalListener = window.firebaseOnSnapshot(signalsRef, async (snapshot) => {
                 snapshot.docChanges().forEach(async (change) => {
@@ -674,7 +670,6 @@
                 });
             });
 
-            // 4. Presence Tracker
             const presenceRef = window.firebaseDoc(window.db, "rooms", code, "presence", currentUser.id);
             window.firebaseSetDoc(presenceRef, { name: currentUser.name, lastSeen: Date.now() }, { merge: true });
 
@@ -723,7 +718,7 @@
             }
         }
 
-        // ================= Bulletproof Autoplay Bypass & Time Sync ================= *//
+        // ================= Bulletproof Autoplay Bypass & Sync Logic ================= //
         function applyRemoteVideoState(state) {
             isInternalStateChange = true;
             pendingRemoteState = state;
@@ -734,7 +729,6 @@
 
             const player = getActivePlayer();
             if (!player) {
-                // If the player isn't loaded yet, keep trying and prompt user to click if blocked
                 if (state.url) {
                     document.getElementById('syncPromptBanner').classList.remove('hidden');
                 }
@@ -753,7 +747,6 @@
                 try {
                     player.play();
                 } catch (err) {
-                    console.log("Autoplay policy blocked programmatic playback. Showing sync banner.");
                     document.getElementById('syncPromptBanner').classList.remove('hidden');
                 }
             } else {
@@ -766,8 +759,12 @@
             setTimeout(() => { isInternalStateChange = false; }, 500);
         }
 
-        function forceSyncAndPlay() {
+        function executeUnmuteAndPlay() {
             document.getElementById('syncPromptBanner').classList.add('hidden');
+            if (ytPlayer && typeof ytPlayer.unMute === 'function') {
+                ytPlayer.unMute();
+                ytPlayer.setVolume(100);
+            }
             if (pendingRemoteState && pendingRemoteState.url) {
                 loadVideoSource(pendingRemoteState.url, pendingRemoteState.type, false);
                 setTimeout(() => {
@@ -777,7 +774,7 @@
                         player.seekTo(pendingRemoteState.currentTime + elapsedSeconds);
                         player.play();
                     }
-                }, 800);
+                }, 400);
             }
         }
 
@@ -937,13 +934,16 @@
                             playerVars: { 
                                 'autoplay': 1, 
                                 'enablejsapi': 1,
-                                'playsinline': 1
+                                'playsinline': 1,
+                                'mute': 1 // Force start muted to bypass browser block
                             },
                             events: {
                                 'onReady': (event) => {
+                                    // Automatically show sync banner to let user unmute & lock sync
+                                    document.getElementById('syncPromptBanner').classList.remove('hidden');
                                     if (pendingRemoteState) {
-                                        applyRemoteVideoState(pendingRemoteState);
-                                    } else if (currentRoom.videoState.isPlaying) {
+                                        const elapsedSeconds = pendingRemoteState.isPlaying ? (Date.now() - pendingRemoteState.lastUpdated) / 1000 : 0;
+                                        event.target.seekTo(pendingRemoteState.currentTime + elapsedSeconds);
                                         event.target.playVideo();
                                     }
                                 },
@@ -1126,7 +1126,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully with explicit sync fallback banner.");
+        console.log("Firebase initialized successfully with foolproof sync prompt banner.");
     </script>
 </body>
 </html>
