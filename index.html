@@ -734,8 +734,15 @@
                 player.seekTo(targetTime);
             }
 
-            if (state.isPlaying) player.play();
-            else player.pause();
+            if (state.isPlaying) {
+                try {
+                    player.play();
+                } catch (err) {
+                    console.log("Autoplay policy restricted. Waiting for user interaction.", err);
+                }
+            } else {
+                player.pause();
+            }
 
             currentRoom.videoState = state;
             updatePlayIcon(state.isPlaying);
@@ -889,13 +896,25 @@
                 if (window.YT && window.YT.Player) {
                     if (ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
                         ytPlayer.loadVideoById(ytId);
+                        if (currentRoom.videoState.isPlaying) {
+                            setTimeout(() => ytPlayer.playVideo(), 500);
+                        }
                     } else {
                         ytPlayer = new YT.Player('ytPlayer', {
                             height: '100%',
                             width: '100%',
                             videoId: ytId,
-                            playerVars: { 'autoplay': 1, 'enablejsapi': 1 },
+                            playerVars: { 
+                                'autoplay': 1, 
+                                'enablejsapi': 1,
+                                'mute': 0 
+                            },
                             events: {
+                                'onReady': (event) => {
+                                    if (currentRoom.videoState.isPlaying) {
+                                        event.target.playVideo();
+                                    }
+                                },
                                 'onStateChange': (event) => {
                                     if (isInternalStateChange) return;
                                     if (event.data === YT.PlayerState.PLAYING) {
@@ -1075,7 +1094,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully (v11 Modular with Robust WebRTC & Timestamp Sync).");
+        console.log("Firebase initialized successfully (v11 Modular with Autoplay & WebRTC Fixes).");
     </script>
 </body>
 </html>
