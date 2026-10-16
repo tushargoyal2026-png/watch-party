@@ -138,7 +138,7 @@
         </div>
     </div>
 
-    <!-- ================= MAIN APP VIEW (Initially Hidden) ================= -->
+    <!-- ================= MAIN APP VIEW ================= -->
     <div id="mainAppView" class="hidden flex-1 flex flex-col min-h-screen relative z-10">
         <!-- Header Navigation -->
         <header class="border-b border-slate-800/80 glass-panel sticky top-0 z-40">
@@ -188,10 +188,14 @@
             <!-- Left Column: Video Player (8 cols) -->
             <div class="lg:col-span-8 flex flex-col gap-6">
 
-                <!-- Video Player / Screen Share Section -->
                 <div id="playerWrapper" class="relative glass-panel rounded-[28px] overflow-hidden shadow-2xl border border-slate-800/90 group">
                     
                     <div id="emojiOverlay" class="absolute inset-0 pointer-events-none overflow-hidden z-30"></div>
+
+                    <!-- Autoplay Unmute Overlay Banner -->
+                    <div id="unmuteOverlay" onclick="unmuteAndSync()" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-emerald-500/90 text-slate-950 px-5 py-2.5 rounded-full text-xs font-black shadow-2xl cursor-pointer hover:scale-105 transition flex items-center gap-2 border border-white/20">
+                        <i data-lucide="volume-2" class="w-4 h-4"></i> Click to Unmute & Sync Audio
+                    </div>
 
                     <div class="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
                         
@@ -203,7 +207,7 @@
                             <div id="ytPlayer" class="w-full h-full"></div>
                         </div>
 
-                        <!-- Placeholder with Built-in Click-To-Sync Interactive Trigger -->
+                        <!-- Placeholder -->
                         <div id="playerPlaceholder" class="flex flex-col items-center justify-center p-10 text-center">
                             <div class="w-20 h-20 bg-slate-900 border border-slate-800 rounded-3xl flex items-center justify-center mb-5 text-emerald-400 shadow-2xl animate-float">
                                 <i data-lucide="tv" class="w-10 h-10"></i>
@@ -240,15 +244,15 @@
                                     <i data-lucide="layout-grid" class="w-4 h-4"></i> Media Hub
                                 </button>
 
-                                <button onclick="startScreenShare()" class="px-3.5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-2xl transition border border-violet-500/30 text-xs font-bold flex items-center gap-2 shadow-md" title="Share browser tab with audio">
+                                <button onclick="startScreenShare()" class="px-3.5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-2xl transition border border-violet-500/30 text-xs font-bold flex items-center gap-2 shadow-md">
                                     <i data-lucide="monitor-up" class="w-4 h-4"></i> Share Tab Audio
                                 </button>
 
-                                <button onclick="toggleFullScreen()" class="p-3 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-2xl transition border border-slate-800" title="Toggle Fullscreen">
+                                <button onclick="toggleFullScreen()" class="p-3 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-2xl transition border border-slate-800">
                                     <i data-lucide="maximize" class="w-4 h-4"></i>
                                 </button>
 
-                                <button onclick="syncHostTime()" class="p-3 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-2xl transition border border-slate-800" title="Resync to Host">
+                                <button onclick="syncHostTime()" class="p-3 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-2xl transition border border-slate-800">
                                     <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
                                 </button>
 
@@ -269,7 +273,6 @@
             <!-- Right Column: Live Chat & Connected Viewers (4 cols) -->
             <div class="lg:col-span-4 flex flex-col gap-6">
                 
-                <!-- Tab Switcher -->
                 <div class="glass-panel rounded-2xl p-1.5 flex gap-1.5 border border-slate-800/80">
                     <button onclick="switchTab('chat')" id="tabBtnChat" class="flex-1 py-3 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 transition duration-300 flex items-center justify-center gap-2 shadow-md shadow-emerald-500/25">
                         <i data-lucide="message-square" class="w-4 h-4"></i> Live Chat
@@ -329,7 +332,6 @@
             </div>
 
             <div class="space-y-3 my-6">
-                <!-- YouTube Option -->
                 <button onclick="openYouTubeDialog()" class="w-full p-3.5 bg-slate-900 hover:bg-emerald-500/10 border border-slate-800 hover:border-emerald-500/50 rounded-2xl transition flex items-center justify-between text-xs font-bold text-white group">
                     <div class="flex items-center gap-3">
                         <i data-lucide="youtube" class="w-5 h-5 text-red-500 group-hover:scale-110 transition"></i>
@@ -338,7 +340,6 @@
                     <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">Direct Sync</span>
                 </button>
 
-                <!-- External Streaming Platforms -->
                 <a href="https://www.netflix.com" target="_blank" onclick="closeMediaHubModal()" class="p-3.5 bg-slate-900 hover:bg-red-500/10 border border-slate-800 hover:border-red-500/50 rounded-2xl transition flex items-center justify-between text-xs font-bold text-white group">
                     <div class="flex items-center gap-3">
                         <i data-lucide="external-link" class="w-5 h-5 text-red-600 group-hover:scale-110 transition"></i>
@@ -458,13 +459,14 @@
         let activePlayerType = 'none';
         let ytPlayer = null;
         let pendingYtUrl = '';
+        let pendingRemoteState = null;
         let isInternalStateChange = false;
         let unsubscribeRoomListener = null;
         let unsubscribeChatListener = null;
         let unsubscribePresenceListener = null;
         let unsubscribeSignalListener = null;
 
-        // Enhanced WebRTC configuration with multiple redundant public STUN servers
+        // Enhanced WebRTC configuration with STUN servers
         let peerConnection = null;
         let localStream = null;
         const rtcConfig = {
@@ -630,7 +632,7 @@
             if (unsubscribePresenceListener) unsubscribePresenceListener();
             if (unsubscribeSignalListener) unsubscribeSignalListener();
 
-            // 1. Room Sync Listener with Precise Timestamp Calculation
+            // 1. Room Sync Listener
             unsubscribeRoomListener = window.firebaseOnSnapshot(window.firebaseDoc(window.db, "rooms", code), (docSnap) => {
                 if (!docSnap.exists()) return;
                 const data = docSnap.data();
@@ -652,7 +654,7 @@
                 });
             });
 
-            // 3. WebRTC Signaling Listener for Screen/Tab Share
+            // 3. WebRTC Signaling Listener
             const signalsRef = window.firebaseCollection(window.db, "rooms", code, "signals");
             unsubscribeSignalListener = window.firebaseOnSnapshot(signalsRef, async (snapshot) => {
                 snapshot.docChanges().forEach(async (change) => {
@@ -714,8 +716,10 @@
             }
         }
 
+        // ================= Autoplay Bypass and Time Sync ================= //
         function applyRemoteVideoState(state) {
             isInternalStateChange = true;
+            pendingRemoteState = state;
 
             if (state.url && state.url !== currentRoom.videoState.url) {
                 loadVideoSource(state.url, state.type, false);
@@ -723,18 +727,8 @@
 
             const player = getActivePlayer();
             if (!player) {
-                const placeholder = document.getElementById('playerPlaceholder');
-                if (placeholder && state.url) {
-                    placeholder.classList.remove('hidden');
-                    document.getElementById('placeholderTitle').innerText = 'Room Stream Available!';
-                    document.getElementById('placeholderDesc').innerText = 'Click below to bypass browser restrictions and join the synchronized playback.';
-                    document.getElementById('placeholderActionButtons').innerHTML = `
-                        <button onclick="loadVideoSource('${state.url}', '${state.type}', false); setTimeout(() => { const p = getActivePlayer(); if(p) { p.play(); } }, 600);" class="px-6 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-bold rounded-xl text-xs shadow-xl animate-pulse">
-                            ▶ Click to Sync & Play Stream
-                        </button>
-                    `;
-                }
-                setTimeout(() => applyRemoteVideoState(state), 800);
+                // Keep retrying until IFrame/Stream element finishes loading
+                setTimeout(() => applyRemoteVideoState(state), 600);
                 return;
             }
 
@@ -746,10 +740,16 @@
             }
 
             if (state.isPlaying) {
-                try {
-                    player.play();
-                } catch (err) {
-                    console.log("Autoplay policy restricted playback.", err);
+                // Execute play muted if browser autoplay blocks unmuted sound
+                const playPromise = player.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(() => {
+                        if (ytPlayer && typeof ytPlayer.mute === 'function') {
+                            ytPlayer.mute();
+                            player.play();
+                            document.getElementById('unmuteOverlay').classList.remove('hidden');
+                        }
+                    });
                 }
             } else {
                 player.pause();
@@ -761,7 +761,17 @@
             setTimeout(() => { isInternalStateChange = false; }, 500);
         }
 
-        // ================= Robust WebRTC Screen & Audio Sync ================= //
+        function unmuteAndSync() {
+            if (ytPlayer && typeof ytPlayer.unMute === 'function') {
+                ytPlayer.unMute();
+            }
+            document.getElementById('unmuteOverlay').classList.add('hidden');
+            if (pendingRemoteState) {
+                applyRemoteVideoState(pendingRemoteState);
+            }
+        }
+
+        // ================= WebRTC Screen & Audio Sync ================= //
         async function startScreenShare() {
             try {
                 localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
@@ -908,7 +918,9 @@
                     if (ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
                         ytPlayer.loadVideoById(ytId);
                         if (currentRoom.videoState.isPlaying) {
-                            setTimeout(() => ytPlayer.playVideo(), 500);
+                            setTimeout(() => {
+                                if (pendingRemoteState) applyRemoteVideoState(pendingRemoteState);
+                            }, 500);
                         }
                     } else {
                         ytPlayer = new YT.Player('ytPlayer', {
@@ -918,11 +930,13 @@
                             playerVars: { 
                                 'autoplay': 1, 
                                 'enablejsapi': 1,
-                                'mute': 0 
+                                'playsinline': 1
                             },
                             events: {
                                 'onReady': (event) => {
-                                    if (currentRoom.videoState.isPlaying) {
+                                    if (pendingRemoteState) {
+                                        applyRemoteVideoState(pendingRemoteState);
+                                    } else if (currentRoom.videoState.isPlaying) {
                                         event.target.playVideo();
                                     }
                                 },
@@ -1105,7 +1119,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully (v11 Modular with Interactive Autoplay Bypass).");
+        console.log("Firebase initialized successfully (v11 Modular with WebRTC & Autoplay Handshake).");
     </script>
 </body>
 </html>
