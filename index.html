@@ -624,7 +624,7 @@
             if (unsubscribePresenceListener) unsubscribePresenceListener();
             if (unsubscribeSignalListener) unsubscribeSignalListener();
 
-            // 1. Room Sync Listener with Precise Timestamp Calculation for New Joins
+            // 1. Room Sync Listener with Precise Timestamp Calculation & Ready Retry
             unsubscribeRoomListener = window.firebaseOnSnapshot(window.firebaseDoc(window.db, "rooms", code), (docSnap) => {
                 if (!docSnap.exists()) return;
                 const data = docSnap.data();
@@ -716,23 +716,26 @@
             }
 
             const player = getActivePlayer();
-            if (player) {
-                // Precise calculation of elapsed time since last state update for newly joining viewers
-                const elapsedSeconds = state.isPlaying ? (Date.now() - state.lastUpdated) / 1000 : 0;
-                const targetTime = state.currentTime + elapsedSeconds;
-                
-                if (Math.abs(player.getCurrentTime() - targetTime) > 1.0) {
-                    player.seekTo(targetTime);
-                }
-
-                if (state.isPlaying) player.play();
-                else player.pause();
+            if (!player) {
+                // Retry if player is still buffering or loading on new join
+                setTimeout(() => applyRemoteVideoState(state), 800);
+                return;
             }
+
+            const elapsedSeconds = state.isPlaying ? (Date.now() - state.lastUpdated) / 1000 : 0;
+            const targetTime = state.currentTime + elapsedSeconds;
+
+            if (Math.abs(player.getCurrentTime() - targetTime) > 1.0) {
+                player.seekTo(targetTime);
+            }
+
+            if (state.isPlaying) player.play();
+            else player.pause();
 
             currentRoom.videoState = state;
             updatePlayIcon(state.isPlaying);
             
-            setTimeout(() => { isInternalStateChange = false; }, 400);
+            setTimeout(() => { isInternalStateChange = false; }, 500);
         }
 
         // ================= WebRTC Screen Share & Audio Signaling ================= //
@@ -749,7 +752,6 @@
                 screenVideo.play();
                 addSystemChatMessage('Screen/Tab sharing started with audio.');
 
-                // Initiate WebRTC peer connections with connected viewers
                 setupPeerConnection();
                 localStream.getTracks()[0].onended = () => stopScreenShare();
             } catch (err) {
@@ -807,14 +809,22 @@
 
             if (!peerConnection) {
                 peerConnection = new RTCPeerConnection(rtcConfig);
+
                 peerConnection.ontrack = (event) => {
                     const screenVideo = document.getElementById('screenShareVideo');
                     screenVideo.srcObject = event.streams[0];
                     screenVideo.classList.remove('hidden');
+                    
                     document.getElementById('playerPlaceholder').classList.add('hidden');
                     document.getElementById('ytPlayerContainer').classList.add('hidden');
-                    screenVideo.play().catch(e => console.log(e));
-                    addSystemChatMessage('Connected to broadcaster screen share stream.');
+
+                    screenVideo.play().catch(err => {
+                        console.log("Auto-play prevented, muting audio for initial play:", err);
+                        screenVideo.muted = true;
+                        screenVideo.play();
+                    });
+
+                    addSystemChatMessage('Connected to live screen share stream!');
                 };
 
                 peerConnection.onicecandidate = (event) => {
@@ -846,7 +856,7 @@
                 try {
                     await peerConnection.addIceCandidate(new RTCIceCandidate(JSON.parse(data.candidate)));
                 } catch (e) {
-                    console.error("Error adding received ice candidate", e);
+                    console.error("Error adding received ICE candidate:", e);
                 }
             }
         }
@@ -1053,7 +1063,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully (v11 Modular with WebRTC Signaling & Timestamp Sync).");
+        console.log("Firebase initialized successfully (v11 Modular with WebRTC Fixes & Timestamp Sync).");
     </script>
 </body>
 </html>
