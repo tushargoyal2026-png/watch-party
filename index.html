@@ -646,7 +646,6 @@
                 if (!docSnap.exists()) return;
                 const data = docSnap.data();
 
-                // Only apply if the update came from another user (not locked by local action)
                 if (data.videoState && !isLocalAction) {
                     applyRemoteVideoState(data.videoState);
                 }
@@ -749,14 +748,14 @@
 
             try {
                 const localTime = player.getCurrentTime();
-                if (Math.abs(localTime - targetTime) > 1.0) {
+                if (Math.abs(localTime - targetTime) > 1.5) {
                     player.seekTo(targetTime, true);
                 }
 
                 if (state.isPlaying) {
-                    player.playVideo();
+                    player.play();
                 } else {
-                    player.pauseVideo();
+                    player.pause();
                 }
             } catch (err) {
                 console.warn("Sync execution warning:", err);
@@ -970,15 +969,16 @@
                                 'onStateChange': (event) => {
                                     if (isLocalAction) return;
                                     
-                                    // 1 = PLAYING, 2 = PAUSED
                                     if (event.data === YT.PlayerState.PLAYING) {
                                         triggerLocalLock();
                                         currentRoom.videoState.isPlaying = true;
                                         publishRoomState();
+                                        updatePlayIcon(true);
                                     } else if (event.data === YT.PlayerState.PAUSED) {
                                         triggerLocalLock();
                                         currentRoom.videoState.isPlaying = false;
                                         publishRoomState();
+                                        updatePlayIcon(false);
                                     }
                                 }
                             }
@@ -1006,11 +1006,21 @@
         function getActivePlayer() {
             if (activePlayerType === 'yt' && ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
                 return {
-                    play: () => ytPlayer.playVideo(),
-                    pause: () => ytPlayer.pauseVideo(),
-                    seekTo: (t) => ytPlayer.seekTo(t, true),
-                    getCurrentTime: () => ytPlayer.getCurrentTime() || 0,
-                    getDuration: () => ytPlayer.getDuration() || 0
+                    play: () => {
+                        try { ytPlayer.playVideo(); } catch(e){}
+                    },
+                    pause: () => {
+                        try { ytPlayer.pauseVideo(); } catch(e){}
+                    },
+                    seekTo: (t) => {
+                        try { ytPlayer.seekTo(t, true); } catch(e){}
+                    },
+                    getCurrentTime: () => {
+                        try { return ytPlayer.getCurrentTime() || 0; } catch(e){ return 0; }
+                    },
+                    getDuration: () => {
+                        try { return ytPlayer.getDuration() || 0; } catch(e){ return 0; }
+                    }
                 };
             }
             return null;
@@ -1186,7 +1196,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully with local action debounce locks.");
+        console.log("Firebase initialized successfully with robust playback sync.");
     </script>
 </body>
 </html>
