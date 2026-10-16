@@ -726,22 +726,17 @@
             isInternalStateChange = true;
             pendingRemoteState = state;
 
-            // Calculate precise live time accounting for network transmission delay
             const elapsedSeconds = state.isPlaying ? (Date.now() - state.lastUpdated) / 1000 : 0;
             const targetTime = state.currentTime + elapsedSeconds;
 
             const player = getActivePlayer();
             if (!player) {
-                // Player hasn't initialized yet; trigger load and show unlock banner
                 loadVideoSource(state.url, state.type, false);
                 document.getElementById('syncPromptBanner').classList.remove('hidden');
                 setTimeout(() => { isInternalStateChange = false; }, 400);
                 return;
             }
 
-            // Check if active video URL needs updating
-            let currentYtId = extractYtId(state.url);
-            // If the player is ready, check and sync
             try {
                 if (Math.abs(player.getCurrentTime() - targetTime) > 1.5) {
                     player.seekTo(targetTime, true);
@@ -763,7 +758,9 @@
         }
 
         function executeUnmuteAndPlay() {
+            // Hide the sync prompt banner immediately
             document.getElementById('syncPromptBanner').classList.add('hidden');
+            
             if (ytPlayer && typeof ytPlayer.unMute === 'function') {
                 ytPlayer.unMute();
                 ytPlayer.setVolume(100);
@@ -947,7 +944,7 @@
                                 'enablejsapi': 1,
                                 'playsinline': 1,
                                 'start': Math.floor(startSec),
-                                'mute': 1 // Required by modern browsers to allow autoplay
+                                'mute': 1
                             },
                             events: {
                                 'onReady': (event) => {
@@ -1142,7 +1139,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully with absolute join-room timestamp sync fix.");
+        console.log("Firebase initialized successfully with banner dismissal fix.");
     </script>
 </body>
 </html>
