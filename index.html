@@ -192,9 +192,16 @@
                     
                     <div id="emojiOverlay" class="absolute inset-0 pointer-events-none overflow-hidden z-30"></div>
 
-                    <!-- Autoplay Unmute Overlay Banner -->
-                    <div id="unmuteOverlay" onclick="unmuteAndSync()" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-emerald-500/90 text-slate-950 px-5 py-2.5 rounded-full text-xs font-black shadow-2xl cursor-pointer hover:scale-105 transition flex items-center gap-2 border border-white/20">
-                        <i data-lucide="volume-2" class="w-4 h-4"></i> Click to Unmute & Sync Audio
+                    <!-- Explicit Autoplay Bypass Banner for Joiners -->
+                    <div id="syncPromptBanner" class="hidden absolute inset-0 bg-slate-950/90 z-40 flex flex-col items-center justify-center p-6 text-center">
+                        <div class="w-16 h-16 bg-emerald-500/20 border border-emerald-500/40 rounded-2xl flex items-center justify-center text-emerald-400 mb-4 animate-bounce">
+                            <i data-lucide="play" class="w-8 h-8 fill-current"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Room Stream Active!</h3>
+                        <p class="text-xs text-slate-400 max-w-sm mb-6">Click below to bypass browser restrictions and join synchronized playback instantly.</p>
+                        <button onclick="forceSyncAndPlay()" class="px-6 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-bold rounded-xl text-xs shadow-xl shadow-emerald-500/30 transition transform hover:scale-105">
+                            ▶ Join & Play Synchronized Stream
+                        </button>
                     </div>
 
                     <div class="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
@@ -716,7 +723,7 @@
             }
         }
 
-        // ================= Autoplay Bypass and Time Sync ================= //
+        // ================= Bulletproof Autoplay Bypass & Time Sync ================= *//
         function applyRemoteVideoState(state) {
             isInternalStateChange = true;
             pendingRemoteState = state;
@@ -727,7 +734,10 @@
 
             const player = getActivePlayer();
             if (!player) {
-                // Keep retrying until IFrame/Stream element finishes loading
+                // If the player isn't loaded yet, keep trying and prompt user to click if blocked
+                if (state.url) {
+                    document.getElementById('syncPromptBanner').classList.remove('hidden');
+                }
                 setTimeout(() => applyRemoteVideoState(state), 600);
                 return;
             }
@@ -735,21 +745,16 @@
             const elapsedSeconds = state.isPlaying ? (Date.now() - state.lastUpdated) / 1000 : 0;
             const targetTime = state.currentTime + elapsedSeconds;
 
-            if (Math.abs(player.getCurrentTime() - targetTime) > 1.0) {
+            if (Math.abs(player.getCurrentTime() - targetTime) > 1.5) {
                 player.seekTo(targetTime);
             }
 
             if (state.isPlaying) {
-                // Execute play muted if browser autoplay blocks unmuted sound
-                const playPromise = player.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(() => {
-                        if (ytPlayer && typeof ytPlayer.mute === 'function') {
-                            ytPlayer.mute();
-                            player.play();
-                            document.getElementById('unmuteOverlay').classList.remove('hidden');
-                        }
-                    });
+                try {
+                    player.play();
+                } catch (err) {
+                    console.log("Autoplay policy blocked programmatic playback. Showing sync banner.");
+                    document.getElementById('syncPromptBanner').classList.remove('hidden');
                 }
             } else {
                 player.pause();
@@ -761,13 +766,18 @@
             setTimeout(() => { isInternalStateChange = false; }, 500);
         }
 
-        function unmuteAndSync() {
-            if (ytPlayer && typeof ytPlayer.unMute === 'function') {
-                ytPlayer.unMute();
-            }
-            document.getElementById('unmuteOverlay').classList.add('hidden');
-            if (pendingRemoteState) {
-                applyRemoteVideoState(pendingRemoteState);
+        function forceSyncAndPlay() {
+            document.getElementById('syncPromptBanner').classList.add('hidden');
+            if (pendingRemoteState && pendingRemoteState.url) {
+                loadVideoSource(pendingRemoteState.url, pendingRemoteState.type, false);
+                setTimeout(() => {
+                    const player = getActivePlayer();
+                    if (player) {
+                        const elapsedSeconds = (Date.now() - pendingRemoteState.lastUpdated) / 1000;
+                        player.seekTo(pendingRemoteState.currentTime + elapsedSeconds);
+                        player.play();
+                    }
+                }, 800);
             }
         }
 
@@ -854,8 +864,7 @@
                     document.getElementById('playerPlaceholder').classList.add('hidden');
                     document.getElementById('ytPlayerContainer').classList.add('hidden');
 
-                    screenVideo.play().catch(err => {
-                        console.log("Autoplay blocked, auto-muting fallback:", err);
+                    screenVideo.play().catch(() => {
                         screenVideo.muted = true;
                         screenVideo.play();
                     });
@@ -917,10 +926,8 @@
                 if (window.YT && window.YT.Player) {
                     if (ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
                         ytPlayer.loadVideoById(ytId);
-                        if (currentRoom.videoState.isPlaying) {
-                            setTimeout(() => {
-                                if (pendingRemoteState) applyRemoteVideoState(pendingRemoteState);
-                            }, 500);
+                        if (pendingRemoteState) {
+                            setTimeout(() => applyRemoteVideoState(pendingRemoteState), 500);
                         }
                     } else {
                         ytPlayer = new YT.Player('ytPlayer', {
@@ -1119,7 +1126,7 @@
         window.firebaseOrderBy = orderBy;
         window.isFirebaseActive = true;
 
-        console.log("Firebase initialized successfully (v11 Modular with WebRTC & Autoplay Handshake).");
+        console.log("Firebase initialized successfully with explicit sync fallback banner.");
     </script>
 </body>
 </html>
